@@ -34,7 +34,7 @@ export const MusicPlayer = () => {
         <div className="flex justify-center flex-wrap content-center items-center">
           <AudioPlayer
             playList={playList}
-            audioInitialState={{ isPlaying: false }}
+            audioInitialState={{ isPlaying: false, curPlayId: 1 }}
             activeUI={{
               all: true,
               progress: 'bar',

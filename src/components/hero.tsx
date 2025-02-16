@@ -10,15 +10,23 @@ import { cn } from '@/lib/utils';
 
 const slideData = [
   {
+    title: '',
+    button: '',
     src: 'Hero1.jpg',
   },
   {
+    title: '',
+    button: '',
     src: 'Hero2.jpg',
   },
   {
+    title: '',
+    button: '',
     src: 'Hero3.jpg',
   },
   {
+    title: '',
+    button: '',
     src: 'Hero4.jpg',
   },
 ];
@@ -80,7 +88,7 @@ export const Hero = ({
   children,
   className,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
