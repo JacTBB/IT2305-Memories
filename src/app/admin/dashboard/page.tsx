@@ -1,8 +1,6 @@
 import { auth } from '@/auth';
-import { challenges, db, users } from '@/schema';
-import { eq } from 'drizzle-orm';
 import Image from 'next/image';
-import React, { Suspense } from 'react';
+import React from 'react';
 
 export default async function Dashboard() {
   const session = await auth();
