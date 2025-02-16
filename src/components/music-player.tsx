@@ -10,15 +10,15 @@ import './music-player.css';
 export const MusicPlayer = () => {
   const playList = [
     {
-      name: 'name',
-      img: 'https://cdn.jactbb.com/bp-website/Ark%20Banner.png',
-      src: 'https://cdn.jactbb.com/bp-website/Faust.mp3',
+      name: 'Name',
+      img: 'Hero1.jpg',
+      src: 'Faust.mp3',
       id: 1,
     },
     {
-      name: 'name',
-      img: 'https://cdn.jactbb.com/bp-website/Ark%20Banner.png',
-      src: 'https://cdn.jactbb.com/bp-website/Faust.mp3',
+      name: 'Name',
+      img: 'Hero1.jpg',
+      src: 'Faust.mp3',
       id: 2,
     },
   ];
