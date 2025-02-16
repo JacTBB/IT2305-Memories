@@ -28,8 +28,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
               className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70]"
               src="/SIT.png"
               alt="Logo"
-              width={40}
-              height={40}
+              width={30}
+              height={30}
               priority
             />
           </Link>
