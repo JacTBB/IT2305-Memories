@@ -1,0 +1,16 @@
+.rm-audio-player-provider {
+    background: none !important;
+}
+
+.interface-grid {
+    background: none !important;
+    text-align: center;
+}
+
+.rm-audio-player-provider,
+.rm-audio-player-container,
+.interface-grid,
+.interface-container {
+    display: flex;
+    align-content: center;
+}
