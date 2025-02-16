@@ -1,68 +1,45 @@
-'use client';
-
-import { motion } from 'framer-motion';
-import Image from 'next/image';
+import { db, posts, users } from '@/schema';
+import { eq } from 'drizzle-orm';
 import Link from 'next/link';
+import React from 'react';
 
-import { AudioPlayer } from '@/components/audio-player';
 import { Hero } from '@/components/hero';
-import { MusicPlayer } from '@/components/music-player';
-import { Carousel } from '@/components/ui/carousel';
 
-const slideData = [
-  {
-    src: 'Hero1.jpg',
-  },
-  {
-    src: 'Hero2.jpg',
-  },
-  {
-    src: 'Hero3.jpg',
-  },
-  {
-    src: 'Hero4.jpg',
-  },
-];
+const Posts = async () => {
+  const PostsData = await db
+    .select()
+    .from(posts)
+    .leftJoin(users, eq(posts.authorId, users.id))
+    .then((results) => {
+      const mappedResults = results.map((row) => ({
+        ...row.post,
+        author: row.user,
+      }));
+      return mappedResults;
+    });
 
-export default function Home() {
+  return (
+    <div className="flex flex-wrap flex-row justify-center items-center p-12">
+      {Object.values(PostsData).map((post: any, index) => (
+        <React.Fragment key={index}>
+          <div className="m-8">
+            <p>{post.message}</p>
+            <i>~{post.author.name}</i>
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
+export default async function Home() {
   return (
     <main>
-      <Hero>
-        <div className="relative flex h-full flex-col items-center justify-center px-4 text-center">
-          <motion.h1
-            className="mb-6 text-6xl font-bold tracking-tighter sm:text-7xl lg:text-8xl"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            IT2305
-          </motion.h1>
-          <motion.p
-            className="max-w-[600px] text-lg text-gray-400 sm:text-xl mb-4"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            The Skibidi Class
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <Carousel slides={slideData} />
-          </motion.div>
-        </div>
+      <Hero />
 
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="absolute top-10 right-10"
-        >
-          <MusicPlayer />
-        </motion.div>
-      </Hero>
+      <section>
+        <Posts />
+      </section>
     </main>
   );
 }
