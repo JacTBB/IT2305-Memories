@@ -98,3 +98,12 @@ export const authenticators = pgTable(
     }),
   }),
 );
+
+export const posts = pgTable('post', {
+  id: serial('id').primaryKey(),
+  message: text('message').notNull(),
+
+  authorId: text('authorId').references(() => users.id, { onDelete: 'no action' }),
+  createdTimestamp: timestamp('createdTimestamp').notNull(),
+  star: boolean('star').default(false),
+});
