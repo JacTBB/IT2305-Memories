@@ -1,7 +1,68 @@
 import { auth } from '@/auth';
+import { db, posts, users } from '@/schema';
+import { eq } from 'drizzle-orm';
 import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+const Posts = async ({ userId }: { userId: string }) => {
+  const PostsData = await db
+    .select()
+    .from(posts)
+    .where(eq(posts.authorId, userId))
+    .leftJoin(users, eq(posts.authorId, users.id))
+    .then((results) => {
+      const mappedResults = results.map((row) => ({
+        ...row.post,
+        author: row.user,
+      }));
+      return mappedResults;
+    });
+
+  return (
+    <div className="flex flex-wrap">
+      {Object.values(PostsData).map((post: any, index) => (
+        <React.Fragment key={index}>
+          <Card
+            className={`w-[250px] min-h-[200px] m-1.5 flex flex-col ${post.star ? 'border-yellow-700 hover:border-yellow-600' : 'border-gray-700 hover:border-gray-600'} hover:shadow-slate-600`}
+          >
+            <CardHeader className="text-sm flex-grow pb-6">
+              {post.message ? (
+                <ScrollArea className="max-h-[95px]" type="auto">
+                  {post.message.split('\n\n').map((line: any, index: any) => (
+                    <React.Fragment key={index}>
+                      <p className="text-wrap">{line}</p>
+                      <br />
+                    </React.Fragment>
+                  ))}
+                </ScrollArea>
+              ) : (
+                'Description?'
+              )}
+            </CardHeader>
+
+            <CardFooter className="flex flex-col justify-start">
+              <p className="w-full text-xs">Author: {post.author.name}</p>
+            </CardFooter>
+          </Card>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
 
 export default async function Dashboard() {
   const session = await auth();
@@ -24,10 +85,17 @@ export default async function Dashboard() {
 
   return (
     <main className="flex flex-col p-20 py-10">
-      <section className="w-full flex justify-center">
+      <section className="w-full flex flex-col justify-center items-center">
         <h1 className="text-2xl text-center font-bold">My Posts</h1>
+
+        <br></br>
+        <Button asChild className="w-24">
+          <Link href="/dashboard/posts/new">New Post</Link>
+        </Button>
       </section>
-      <section>WIP</section>
+      <section className="mt-10">
+        <Posts userId={session.user.id || ''} />
+      </section>
     </main>
   );
 }
