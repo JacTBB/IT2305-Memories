@@ -25,7 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
           <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6 w-full">
             <Link
-              href="/home"
+              href="/dashboard"
               className="flex items-center gap-2 text-lg font-semibold md:text-base"
             >
               <Image
@@ -65,7 +65,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </SheetTrigger>
             <SheetContent side="left">
               <nav className="grid gap-6 text-lg font-medium">
-                <Link href="/home" className="flex items-center gap-2 text-lg font-semibold">
+                <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold">
                   <Image
                     className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70]"
                     src="/SIT.png"
@@ -140,7 +140,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </div>
 
-      <Link href="/home">
+      <Link href="/">
         <div className="group rounded-lg border border-transparent mt-10 px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
           <h2 className="mb-3 text-2xl font-semibold">
             Return Home{' '}
