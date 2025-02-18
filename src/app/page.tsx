@@ -40,6 +40,14 @@ export default async function Home() {
       <section>
         <Posts />
       </section>
+
+      <footer className="w-full bg-black text-center text-neutral-400 text-xs py-1">
+        <p className="inline text-[10px]">&copy; IT2305 Nanyang Polytechnic 2025</p>
+        <p className="inline mx-1">-</p>
+        <a href="dashboard" className="hover:underline">
+          Login
+        </a>
+      </footer>
     </main>
   );
 }
