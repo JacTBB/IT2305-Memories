@@ -1,4 +1,4 @@
-import { auth } from '@/auth';
+import { auth, signOut } from '@/auth';
 import { Menu } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -84,8 +84,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
               {/* <DropdownMenuSeparator />
             <DropdownMenuItem>Settings</DropdownMenuItem> */}
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Link href="/logout">Logout</Link>
+              <DropdownMenuItem asChild>
+                <form action={async () => { 'use server'; await signOut({ redirectTo: '/' }); }}>
+                  <button type="submit" className="w-full text-left cursor-pointer">Logout</button>
+                </form>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

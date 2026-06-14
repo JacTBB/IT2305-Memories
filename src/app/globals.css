@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes kenburns {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(1.14) translate(-1.5%, -1%); }
+}
+
+.ken-burns {
+  animation: kenburns 7s ease-out forwards;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

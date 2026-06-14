@@ -1,73 +1,39 @@
 'use client';
 
-import Image from 'next/image';
-import AudioPlayer from 'react-modern-audio-player';
-
-import { cn } from '@/lib/utils';
-
-import './music-player.css';
+import { Music2, VolumeX } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 export const MusicPlayer = () => {
-  const playList = [
-    {
-      name: 'Name',
-      img: 'Hero1.jpg',
-      src: 'Faust.mp3',
-      id: 1,
-    },
-    {
-      name: 'Name',
-      img: 'Hero1.jpg',
-      src: 'Faust.mp3',
-      id: 2,
-    },
-  ];
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.play().then(() => setPlaying(true)).catch(() => {});
+  }, []);
+
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      audio.play().then(() => setPlaying(true)).catch(() => {});
+    }
+  };
 
   return (
-    <div className="max-w-xs w-full group/card">
-      <div
-        className={cn(
-          'cursor-pointer relative card min-h-[100px] h-full w-[240px] rounded-xl shadow-2xl mx-auto backgroundImage flex flex-col justify-between p-6',
-          'border-2 border-[#131e41] rounded-xl bg-[#2f395b56] backdrop-blur-sm',
-        )}
+    <>
+      <audio ref={audioRef} src="Bundle%20of%20Joy.mp3" loop />
+      <button
+        onClick={toggle}
+        title={playing ? 'Stop music' : 'Play music'}
+        className="w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 flex items-center justify-center text-white/90 hover:text-white shadow-lg transition-all duration-200"
       >
-        <div className="flex justify-center flex-wrap content-center items-center">
-          <AudioPlayer
-            playList={playList}
-            audioInitialState={{ isPlaying: false, curPlayId: 1 }}
-            activeUI={{
-              all: true,
-              progress: 'bar',
-              repeatType: true,
-              playList: false,
-              artwork: false,
-              trackInfo: false,
-            }}
-            placement={{
-              player: 'top',
-              playList: 'bottom',
-              volumeSlider: 'right',
-              interface: {
-                templateArea: {
-                  artwork: 'row1-2',
-                  trackInfo: 'row2-2',
-                  trackTimeCurrent: 'row3-1',
-                  progress: 'row3-2',
-                  trackTimeDuration: 'row3-3',
-                  playList: 'row4-3',
-                  repeatType: 'row4-3',
-                  playButton: 'row4-2',
-                  volume: 'row4-1',
-                },
-              },
-            }}
-            rootContainerProps={{
-              width: '220px',
-              height: '100px',
-            }}
-          />
-        </div>
-      </div>
-    </div>
+        {playing ? <VolumeX className="w-5 h-5" /> : <Music2 className="w-5 h-5" />}
+      </button>
+    </>
   );
 };

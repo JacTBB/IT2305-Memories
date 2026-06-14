@@ -1,7 +1,7 @@
 'use client';
 
-import { IconArrowNarrowRight } from '@tabler/icons-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface SlideData {
   title: string;
@@ -9,194 +9,122 @@ interface SlideData {
   src: string;
 }
 
-interface SlideProps {
-  slide: SlideData;
-  index: number;
-  current: number;
-  handleSlideClick: (index: number) => void;
-}
+export function Carousel({ slides }: { slides: SlideData[] }) {
+  const [order, setOrder] = useState(() => slides.map((_, i) => i));
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [animKey, setAnimKey] = useState(0);
 
-const Slide = ({ slide, index, current, handleSlideClick }: SlideProps) => {
-  const slideRef = useRef<HTMLLIElement>(null);
-
-  const xRef = useRef(0);
-  const yRef = useRef(0);
-  const frameRef = useRef<number>();
-
-  useEffect(() => {
-    const animate = () => {
-      if (!slideRef.current) return;
-
-      const x = xRef.current;
-      const y = yRef.current;
-
-      slideRef.current.style.setProperty('--x', `${x}px`);
-      slideRef.current.style.setProperty('--y', `${y}px`);
-
-      frameRef.current = requestAnimationFrame(animate);
-    };
-
-    frameRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (frameRef.current) {
-        cancelAnimationFrame(frameRef.current);
-      }
-    };
+  const goTo = useCallback((idx: number) => {
+    setCurrent(idx);
+    setAnimKey((k) => k + 1);
   }, []);
 
-  const handleMouseMove = (event: React.MouseEvent) => {
-    const el = slideRef.current;
-    if (!el) return;
+  const goNext = useCallback(() => {
+    goTo((current + 1) % order.length);
+  }, [current, order.length, goTo]);
 
-    const r = el.getBoundingClientRect();
-    xRef.current = event.clientX - (r.left + Math.floor(r.width / 2));
-    yRef.current = event.clientY - (r.top + Math.floor(r.height / 2));
+  const goPrev = useCallback(() => {
+    goTo((current - 1 + order.length) % order.length);
+  }, [current, order.length, goTo]);
+
+  useEffect(() => {
+    if (paused) return;
+    const id = setInterval(goNext, 5000);
+    return () => clearInterval(id);
+  }, [paused, goNext]);
+
+  const shuffle = () => {
+    setOrder([...slides.map((_, i) => i)].sort(() => Math.random() - 0.5));
+    goTo(0);
   };
 
-  const handleMouseLeave = () => {
-    xRef.current = 0;
-    yRef.current = 0;
-  };
-
-  const imageLoaded = (event: React.SyntheticEvent<HTMLImageElement>) => {
-    event.currentTarget.style.opacity = '1';
-  };
-
-  const { src, button, title } = slide;
-
-  return (
-    <div className="[perspective:1200px] [transform-style:preserve-3d]">
-      <li
-        ref={slideRef}
-        className="flex flex-1 flex-col items-center justify-center relative text-center text-white opacity-100 transition-all duration-300 ease-in-out w-[60vmin] h-[60vmin] mx-[4vmin] z-10 "
-        onClick={() => handleSlideClick(index)}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          transform: current !== index ? 'scale(0.98) rotateX(8deg)' : 'scale(1) rotateX(0deg)',
-          transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-          transformOrigin: 'bottom',
-        }}
-      >
-        <div
-          className="absolute top-0 left-0 w-full h-full bg-[#1D1F2F] rounded-[1%] overflow-hidden transition-all duration-150 ease-out"
-          style={{
-            transform:
-              current === index
-                ? 'translate3d(calc(var(--x) / 30), calc(var(--y) / 30), 0)'
-                : 'none',
-          }}
-        >
-          <img
-            className="absolute inset-0 w-[120%] h-[120%] object-cover opacity-100 transition-opacity duration-600 ease-in-out"
-            style={{
-              opacity: current === index ? 1 : 0.5,
-            }}
-            alt={title}
-            src={src}
-            onLoad={imageLoaded}
-            loading="eager"
-            decoding="sync"
-          />
-          {current === index && (
-            <div className="absolute inset-0 bg-black/30 transition-all duration-1000" />
-          )}
-        </div>
-
-        <article
-          className={`relative p-[4vmin] transition-opacity duration-1000 ease-in-out ${
-            current === index ? 'opacity-100 visible' : 'opacity-0 invisible'
-          }`}
-        >
-          <h2 className="text-lg md:text-2xl lg:text-4xl font-semibold  relative">{title}</h2>
-          {/* <div className="flex justify-center">
-            <button className="mt-6  px-4 py-2 w-fit mx-auto sm:text-sm text-black bg-white h-12 border border-transparent text-xs flex justify-center items-center rounded-2xl hover:shadow-lg transition duration-200 shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]">
-              {button}
-            </button>
-          </div> */}
-        </article>
-      </li>
-    </div>
-  );
-};
-
-interface CarouselControlProps {
-  type: string;
-  title: string;
-  handleClick: () => void;
-}
-
-const CarouselControl = ({ type, title, handleClick }: CarouselControlProps) => {
-  return (
-    <button
-      className={`w-10 h-10 flex items-center mx-2 justify-center bg-neutral-200 dark:bg-neutral-800 border-3 border-transparent rounded-full focus:border-[#6D64F7] focus:outline-none hover:-translate-y-0.5 active:translate-y-0.5 transition duration-200 ${
-        type === 'previous' ? 'rotate-180' : ''
-      }`}
-      title={title}
-      onClick={handleClick}
-    >
-      <IconArrowNarrowRight className="text-neutral-600 dark:text-neutral-200" />
-    </button>
-  );
-};
-
-interface CarouselProps {
-  slides: SlideData[];
-}
-
-export function Carousel({ slides }: CarouselProps) {
-  const [current, setCurrent] = useState(0);
-
-  const handlePreviousClick = () => {
-    const previous = current - 1;
-    setCurrent(previous < 0 ? slides.length - 1 : previous);
-  };
-
-  const handleNextClick = () => {
-    const next = current + 1;
-    setCurrent(next === slides.length ? 0 : next);
-  };
-
-  const handleSlideClick = (index: number) => {
-    if (current !== index) {
-      setCurrent(index);
-    }
-  };
-
-  const id = useId();
+  const prevI = (current - 1 + order.length) % order.length;
+  const nextI = (current + 1) % order.length;
+  const visible = new Set([prevI, current, nextI]);
 
   return (
     <div
-      className="relative w-[60vmin] h-[60vmin] mx-auto"
-      aria-labelledby={`carousel-heading-${id}`}
+      className="relative w-[76vmin] h-[64vmin] rounded-2xl overflow-hidden shadow-2xl"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
-      <ul
-        className="absolute flex mx-[-4vmin] transition-transform duration-1000 ease-in-out"
-        style={{
-          transform: `translateX(-${current * (100 / slides.length)}%)`,
-        }}
-      >
-        {slides.map((slide, index) => (
-          <Slide
-            key={index}
-            slide={slide}
-            index={index}
-            current={current}
-            handleSlideClick={handleSlideClick}
-          />
-        ))}
-      </ul>
+      {/* Slides — only prev/current/next are in the DOM */}
+      {order.map((slideIdx, i) => {
+        if (!visible.has(i)) return null;
+        const isActive = i === current;
+        return (
+          <div
+            key={i}
+            className="absolute inset-0"
+            style={{
+              opacity: isActive ? 1 : 0,
+              transition: 'opacity 1.2s ease-in-out',
+              zIndex: isActive ? 1 : 0,
+            }}
+          >
+            <img
+              key={isActive ? animKey : i}
+              src={slides[slideIdx].src}
+              alt=""
+              className="w-full h-full object-cover ken-burns"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        );
+      })}
 
-      <div className="absolute flex justify-center w-full top-[calc(100%+1rem)]">
-        <CarouselControl
-          type="previous"
-          title="Go to previous slide"
-          handleClick={handlePreviousClick}
+      {/* Bottom gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent z-10 pointer-events-none" />
+
+      {/* Progress bar */}
+      <div className="absolute top-0 inset-x-0 h-0.5 bg-white/10 z-20">
+        <div
+          className="h-full bg-white/50"
+          style={{
+            width: `${((current + 1) / order.length) * 100}%`,
+            transition: 'width 0.4s ease',
+          }}
         />
-
-        <CarouselControl type="next" title="Go to next slide" handleClick={handleNextClick} />
       </div>
+
+      {/* Counter */}
+      <div className="absolute top-3 right-4 z-20 text-white/50 text-xs font-mono tracking-wide select-none">
+        {current + 1} / {order.length}
+      </div>
+
+      {/* Left arrow */}
+      <button
+        onClick={goPrev}
+        className="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/60 text-white rounded-full p-2 transition-all hover:scale-110"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+
+      {/* Right arrow */}
+      <button
+        onClick={goNext}
+        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/60 text-white rounded-full p-2 transition-all hover:scale-110"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
+      {/* Shuffle */}
+      <button
+        onClick={shuffle}
+        title="Shuffle photos"
+        className="absolute bottom-4 right-4 z-20 bg-black/30 hover:bg-black/60 text-white/60 hover:text-white rounded-full p-1.5 transition-all"
+      >
+        <Shuffle className="w-3.5 h-3.5" />
+      </button>
+
+      {/* Paused indicator */}
+      {paused && (
+        <div className="absolute bottom-4 left-4 z-20 text-white/40 text-xs select-none">
+          Paused
+        </div>
+      )}
     </div>
   );
 }
