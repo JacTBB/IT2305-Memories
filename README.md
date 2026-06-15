@@ -1,6 +1,6 @@
 # IT2305 Memories
 
-A class memories website for **IT2305 — The Skibidi Class**. Browse photos, react to your favourites, and relive the moments.
+A class memories website for IT2305. Browse photos, react to your favourites, and relive the moments.
 
 ## Features
 
@@ -21,33 +21,6 @@ A class memories website for **IT2305 — The Skibidi Class**. Browse photos, re
 | Database | PostgreSQL via Drizzle ORM |
 | Auth | NextAuth v5 — Discord OAuth |
 | Photos | MinIO S3-compatible CDN (`cdn.jactbb.com`) |
-
-## Getting started
-
-```bash
-npm install
-npm run dev
-```
-
-Create a `.env.local` file (not committed) with the following:
-
-```env
-# Database
-AUTH_DRIZZLE_URL=
-
-# NextAuth
-AUTH_SECRET=
-AUTH_DISCORD_ID=
-AUTH_DISCORD_SECRET=
-AUTH_URL=http://localhost:3000
-
-# MinIO CDN
-MINIO_ENDPOINT=
-MINIO_PORT=
-MINIO_REGION=
-MINIO_ACCESSKEY=
-MINIO_SECRETKEY=
-```
 
 ## Photo CDN
 
