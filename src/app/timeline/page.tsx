@@ -2,8 +2,9 @@
 
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { Reactions } from '@/components/reactions';
 import { Lightbox } from '@/components/ui/lightbox';
 import { slides } from '@/lib/slides';
 
@@ -38,6 +39,14 @@ const allDatedSrcs = sortedDates.flatMap((d) => grouped[d]);
 
 export default function TimelinePage() {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [allCounts, setAllCounts] = useState<Record<string, Record<string, number>> | null>(null);
+
+  useEffect(() => {
+    fetch('/api/reactions/all')
+      .then((r) => r.json())
+      .then((data) => setAllCounts(data))
+      .catch(() => setAllCounts({}));
+  }, []);
 
   const onPrev = useCallback(() => {
     setLightboxIdx((i) => i === null ? null : (i - 1 + allDatedSrcs.length) % allDatedSrcs.length);
@@ -84,21 +93,30 @@ export default function TimelinePage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {srcs.map((src, i) => {
                   const idx = startIdx + i;
+                  const photoId = decodeURIComponent(src.split('/').pop() ?? '');
                   return (
-                    <button
-                      key={src}
-                      onClick={() => setLightboxIdx(idx)}
-                      className="aspect-square overflow-hidden rounded-lg cursor-zoom-in group relative"
-                    >
-                      <img
-                        src={src}
-                        alt=""
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                    </button>
+                    <div key={src} className="flex flex-col gap-1">
+                      <button
+                        onClick={() => setLightboxIdx(idx)}
+                        className="aspect-square overflow-hidden rounded-lg cursor-zoom-in group relative"
+                      >
+                        <img
+                          src={src}
+                          alt=""
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                      </button>
+                      {allCounts !== null && (
+                        <Reactions
+                          photoId={photoId}
+                          compact
+                          initialCounts={allCounts[photoId] ?? {}}
+                        />
+                      )}
+                    </div>
                   );
                 })}
               </div>

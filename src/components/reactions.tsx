@@ -26,20 +26,24 @@ function setLocalReaction(photoId: string, emoji: string, reacted: boolean) {
 
 interface Props {
   photoId: string;
+  compact?: boolean;
+  initialCounts?: Record<string, number>;
 }
 
-export function Reactions({ photoId }: Props) {
-  const [counts, setCounts] = useState<Record<string, number>>({});
+export function Reactions({ photoId, compact, initialCounts }: Props) {
+  const [counts, setCounts] = useState<Record<string, number>>(initialCounts ?? {});
   const [myReactions, setMyReactions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setMyReactions(getLocalReactions()[photoId] ?? {});
-    fetch(`/api/reactions?photo=${encodeURIComponent(photoId)}`)
-      .then((r) => r.json())
-      .then((data) => setCounts(data))
-      .catch(() => {});
-  }, [photoId]);
+    if (initialCounts === undefined) {
+      fetch(`/api/reactions?photo=${encodeURIComponent(photoId)}`)
+        .then((r) => r.json())
+        .then((data) => setCounts(data))
+        .catch(() => {});
+    }
+  }, [photoId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = async (emoji: string) => {
     if (loading) return;
@@ -77,7 +81,7 @@ export function Reactions({ photoId }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={compact ? 'flex items-center gap-1 flex-wrap justify-center' : 'flex items-center gap-2'}>
       {EMOJIS.map((emoji) => {
         const n = counts[emoji] ?? 0;
         const active = !!myReactions[emoji];
@@ -85,10 +89,12 @@ export function Reactions({ photoId }: Props) {
           <button
             key={emoji}
             onClick={() => toggle(emoji)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-sm transition-all ${active ? 'bg-white/25 text-white scale-105' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'}`}
+            className={compact
+              ? `flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-all ${active ? 'bg-white/30 text-white scale-105' : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'}`
+              : `flex items-center gap-1 px-2.5 py-1 rounded-full text-sm transition-all ${active ? 'bg-white/25 text-white scale-105' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'}`}
           >
-            <span>{emoji}</span>
-            {n > 0 && <span className="text-xs font-medium min-w-[1ch]">{n}</span>}
+            <span className={compact ? 'text-sm' : ''}>{emoji}</span>
+            {n > 0 && <span className="font-medium min-w-[1ch]">{n}</span>}
           </button>
         );
       })}

@@ -52,14 +52,20 @@ export function Lightbox({ srcs, index, onClose, onPrev, onNext }: LightboxProps
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
       onClick={onClose}
     >
-      <img
-        src={src}
-        alt=""
-        className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+      {/* Image + reactions stacked, centered */}
+      <div
+        className="flex flex-col items-center gap-3"
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <img
+          src={src}
+          alt=""
+          className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+        />
+        <Reactions photoId={photoId} />
+      </div>
 
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/50 text-sm font-mono select-none">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/50 text-sm font-mono select-none pointer-events-none">
         {index + 1} / {srcs.length}
       </div>
 
@@ -91,13 +97,6 @@ export function Lightbox({ srcs, index, onClose, onPrev, onNext }: LightboxProps
       >
         <ChevronRight className="w-6 h-6" />
       </button>
-
-      <div
-        className="absolute bottom-6 left-1/2 -translate-x-1/2"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Reactions photoId={photoId} />
-      </div>
     </div>
   );
 }
