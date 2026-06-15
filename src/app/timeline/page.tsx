@@ -51,7 +51,7 @@ const allDatedSrcs = sortedDates.flatMap((d) => grouped[d]);
 export default function TimelinePage() {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [allCounts, setAllCounts] = useState<Record<string, Record<string, number>> | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'polaroid'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'polaroid'>('polaroid');
   const [hoveredPolaroid, setHoveredPolaroid] = useState<number | null>(null);
 
   useEffect(() => {
