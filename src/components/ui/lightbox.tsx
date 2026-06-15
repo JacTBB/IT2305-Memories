@@ -3,6 +3,8 @@
 import { ChevronLeft, ChevronRight, Download, X } from 'lucide-react';
 import { useEffect } from 'react';
 
+import { Reactions } from '@/components/reactions';
+
 interface LightboxProps {
   srcs: string[];
   index: number;
@@ -13,6 +15,7 @@ interface LightboxProps {
 
 export function Lightbox({ srcs, index, onClose, onPrev, onNext }: LightboxProps) {
   const src = srcs[index];
+  const photoId = decodeURIComponent(src.split('/').pop() ?? '');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -88,6 +91,13 @@ export function Lightbox({ srcs, index, onClose, onPrev, onNext }: LightboxProps
       >
         <ChevronRight className="w-6 h-6" />
       </button>
+
+      <div
+        className="absolute bottom-6 left-1/2 -translate-x-1/2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Reactions photoId={photoId} />
+      </div>
     </div>
   );
 }

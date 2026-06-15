@@ -99,6 +99,14 @@ export const authenticators = pgTable(
   }),
 );
 
+export const reactions = pgTable('reaction', {
+  id: serial('id').primaryKey(),
+  photoId: text('photoId').notNull(),
+  emoji: text('emoji').notNull(),
+  ip: text('ip').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
 export const posts = pgTable('post', {
   id: serial('id').primaryKey(),
   message: text('message').notNull(),
