@@ -84,18 +84,18 @@ export default function TimelinePage() {
         </div>
         <div className="flex gap-1 bg-white/5 rounded-lg p-1">
           <button
-            onClick={() => setViewMode('grid')}
-            title="Grid view"
-            className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white/70'}`}
-          >
-            <Grid3x3 className="w-4 h-4" />
-          </button>
-          <button
             onClick={() => setViewMode('polaroid')}
             title="Scrapbook view"
             className={`p-1.5 rounded-md transition-all ${viewMode === 'polaroid' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white/70'}`}
           >
             <Frame className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            title="Grid view"
+            className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white/70'}`}
+          >
+            <Grid3x3 className="w-4 h-4" />
           </button>
         </div>
       </div>
