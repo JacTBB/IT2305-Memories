@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, Shuffle, ZoomIn } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { Reactions } from '@/components/reactions';
 import { Lightbox } from '@/components/ui/lightbox';
 
 interface SlideData {
@@ -44,14 +45,17 @@ export function Carousel({ slides }: { slides: SlideData[] }) {
   const prevI = (current - 1 + order.length) % order.length;
   const nextI = (current + 1) % order.length;
   const visible = new Set([prevI, current, nextI]);
+  const currentPhotoId = decodeURIComponent(orderedSrcs[current].split('/').pop() ?? '');
 
   return (
     <>
       <div
-        className="relative w-[76vmin] h-[64vmin] rounded-2xl overflow-hidden shadow-2xl"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
+        <div
+          className="relative w-[76vmin] h-[64vmin] rounded-2xl overflow-hidden shadow-2xl"
+        >
         {order.map((slideIdx, i) => {
           if (!visible.has(i)) return null;
           const isActive = i === current;
@@ -126,11 +130,16 @@ export function Carousel({ slides }: { slides: SlideData[] }) {
           <Shuffle className="w-3.5 h-3.5" />
         </button>
 
-        {paused && (
-          <div className="absolute bottom-4 left-4 z-20 text-white/40 text-xs select-none">
-            Paused
-          </div>
-        )}
+          {paused && (
+            <div className="absolute bottom-4 left-4 z-20 text-white/40 text-xs select-none">
+              Paused
+            </div>
+          )}
+        </div>
+
+        <div className="mt-3 flex justify-center">
+          <Reactions photoId={currentPhotoId} />
+        </div>
       </div>
 
       {lightboxOpen && (
