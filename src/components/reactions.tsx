@@ -1,5 +1,6 @@
 'use client';
 
+import confetti from 'canvas-confetti';
 import { useEffect, useState } from 'react';
 
 const EMOJIS = ['❤️', '😂', '🔥', '😮', '😢'];
@@ -45,7 +46,7 @@ export function Reactions({ photoId, compact, initialCounts }: Props) {
     }
   }, [photoId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggle = async (emoji: string) => {
+  const toggle = async (emoji: string, e: React.MouseEvent) => {
     if (loading) return;
     setLoading(true);
 
@@ -54,6 +55,18 @@ export function Reactions({ photoId, compact, initialCounts }: Props) {
     const delta = wasReacted ? -1 : 1;
     setCounts((c) => ({ ...c, [emoji]: Math.max(0, (c[emoji] ?? 0) + delta) }));
     setMyReactions((m) => ({ ...m, [emoji]: !wasReacted }));
+
+    if (!wasReacted) {
+      confetti({
+        particleCount: 40,
+        spread: 60,
+        origin: { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight },
+        startVelocity: 22,
+        gravity: 1.4,
+        scalar: 0.8,
+        colors: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff922b', '#cc5de8'],
+      });
+    }
 
     try {
       const res = await fetch('/api/reactions', {
@@ -88,7 +101,7 @@ export function Reactions({ photoId, compact, initialCounts }: Props) {
         return (
           <button
             key={emoji}
-            onClick={() => toggle(emoji)}
+            onClick={(e) => toggle(emoji, e)}
             className={compact
               ? `flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-all ${active ? 'bg-white/30 text-white scale-105' : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'}`
               : `flex items-center gap-1 px-2.5 py-1 rounded-full text-sm transition-all ${active ? 'bg-white/25 text-white scale-105' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'}`}
