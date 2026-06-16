@@ -22,7 +22,7 @@ type PolaroidMeta = {
 type ScrapbookObjectSaved =
   | { kind: 'polaroid'; src: string; label: string; font: string; cardColor: string; left: number; top: number; scaleX: number; scaleY: number; angle: number }
   | { kind: 'sticker'; src: string; left: number; top: number; scaleX: number; scaleY: number; angle: number }
-  | { kind: 'text'; text: string; fill: string; fontFamily: string; fontSize: number; fontStyle?: string; fontWeight?: string; left: number; top: number; angle: number };
+  | { kind: 'text'; text: string; fill: string; fontFamily: string; fontSize: number; fontStyle?: string; fontWeight?: string; left: number; top: number; scaleX: number; scaleY: number; angle: number };
 
 type ScrapbookData = {
   bgColor: string;
@@ -209,7 +209,7 @@ function serializeCanvas(fc: Canvas, bgColor: string): string {
         fill: typeof obj.fill === 'string' ? obj.fill : '#ffffff',
         fontFamily: obj.fontFamily ?? 'sans-serif',
         ...(obj.fontStyle ? { fontStyle: obj.fontStyle } : {}),
-        ...(obj.fontWeight ? { fontWeight: obj.fontWeight } : {}),
+        ...(obj.fontWeight ? { fontWeight: String(obj.fontWeight) } : {}),
       });
     }
   }
