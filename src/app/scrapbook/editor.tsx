@@ -4,7 +4,7 @@
 import { Canvas, FabricImage, IText, Shadow } from 'fabric';
 import { ChevronLeft, Check, Download, Share2, Trash2, Type, X } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { slides } from '@/lib/slides';
 
@@ -34,7 +34,6 @@ const FONTS = [
   { label: 'Elegant',    value: '"Palatino Linotype", serif' },
 ];
 
-// 12 background presets: 4 light → 4 medium → 4 dark
 const BG_PRESETS = [
   { label: 'Blush',  color: '#fce4ec' },
   { label: 'Sky',    color: '#dbeafe' },
@@ -55,55 +54,61 @@ const CARD_PRESETS = [
   '#f0fff0', '#fffde7', '#fce4ec', '#e3f2fd',
 ];
 
-// ─── Sticker definitions ─────────────────────────────────────────────────────
+// ─── Sticker data ─────────────────────────────────────────────────────────────
+
+// Stickers from friend's repo (bjh-developer/restrip), used with permission
+const FRIEND_STICKERS = [
+  { id: 'camera-blue',  label: 'Camera',       src: '/stickers/camera_blue.svg',  scale: 0.10 },
+  { id: 'camera-pink',  label: 'Camera Pink',  src: '/stickers/camera_pink.svg',  scale: 0.10 },
+  { id: 'cloud',        label: 'Cloud',        src: '/stickers/cloud.svg',        scale: 0.10 },
+  { id: 'dog',          label: 'Dog',          src: '/stickers/dog.svg',          scale: 0.10 },
+  { id: 'flower-stamp', label: 'Flower',       src: '/stickers/flower_stamp.svg', scale: 0.15 },
+  { id: 'memories',     label: 'Memories',     src: '/stickers/memories.svg',     scale: 0.15 },
+];
 
 const svgToUrl = (s: string) =>
   `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`;
 
-const SVG_STICKERS: { id: string; label: string; svg: string; scale: number; wide?: true }[] = [
+// Simple hand-crafted shape stickers
+const SHAPE_STICKERS: { id: string; label: string; svg: string; scale: number }[] = [
   {
     id: 'heart', label: 'Heart', scale: 1.2,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="90" viewBox="0 0 100 90"><path d="M50,80 C25,60 5,45 5,28 C5,14 18,4 32,4 C40,4 47,8 50,14 C53,8 60,4 68,4 C82,4 95,14 95,28 C95,45 75,60 50,80Z" fill="#ff6b9d"/></svg>`,
   },
   {
-    id: 'camera', label: 'Camera', scale: 1.0,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect x="5" y="22" width="110" height="65" rx="10" fill="#6b9eff"/><polygon points="38,22 46,10 74,10 82,22" fill="#5a8aee"/><circle cx="60" cy="54" r="22" fill="white" opacity="0.2"/><circle cx="60" cy="54" r="14" fill="white" opacity="0.25"/><circle cx="60" cy="54" r="8" fill="#2a4a99"/><circle cx="90" cy="32" r="6" fill="#ffd700"/></svg>`,
-  },
-  {
-    id: 'flower', label: 'Flower', scale: 1.0,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><ellipse cx="50" cy="22" rx="11" ry="19" fill="#ffb3de"/><ellipse cx="50" cy="78" rx="11" ry="19" fill="#ffb3de"/><ellipse cx="22" cy="50" rx="19" ry="11" fill="#ffb3de"/><ellipse cx="78" cy="50" rx="19" ry="11" fill="#ffb3de"/><ellipse cx="29" cy="29" rx="11" ry="19" fill="#ffb3de" transform="rotate(45,29,29)"/><ellipse cx="71" cy="29" rx="11" ry="19" fill="#ffb3de" transform="rotate(-45,71,29)"/><ellipse cx="29" cy="71" rx="11" ry="19" fill="#ffb3de" transform="rotate(-45,29,71)"/><ellipse cx="71" cy="71" rx="11" ry="19" fill="#ffb3de" transform="rotate(45,71,71)"/><circle cx="50" cy="50" r="17" fill="#ffd700"/><circle cx="50" cy="50" r="9" fill="#ffaa00"/></svg>`,
+    id: 'star', label: 'Star', scale: 1.0,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="95" viewBox="0 0 100 95"><polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill="#fbbf24"/></svg>`,
   },
   {
     id: 'bow', label: 'Bow', scale: 1.0,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><path d="M60,40 C55,28 28,8 8,18 C-2,24 2,40 16,44 C32,50 57,44 60,40Z" fill="#ff6b9d"/><path d="M60,40 C65,28 92,8 112,18 C122,24 118,40 104,44 C88,50 63,44 60,40Z" fill="#ff6b9d"/><circle cx="60" cy="40" r="11" fill="#cc3377"/><path d="M55,50 C50,60 46,70 44,78" stroke="#ff6b9d" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M65,50 C70,60 74,70 76,78" stroke="#ff6b9d" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg>`,
   },
   {
-    id: 'cloud', label: 'Cloud', scale: 1.2,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><circle cx="38" cy="52" r="24" fill="#bfdbfe"/><circle cx="64" cy="44" r="30" fill="#bfdbfe"/><circle cx="92" cy="55" r="20" fill="#bfdbfe"/><rect x="14" y="56" width="98" height="22" fill="#bfdbfe"/></svg>`,
-  },
-  {
     id: 'rainbow', label: 'Rainbow', scale: 1.2,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="72" viewBox="0 0 120 72"><path d="M8,70 Q60,-18 112,70" stroke="#ff4444" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M16,70 Q60,-6 104,70" stroke="#ff8c00" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M24,70 Q60,6 96,70" stroke="#ffd700" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M32,70 Q60,18 88,70" stroke="#44cc44" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M40,70 Q60,30 80,70" stroke="#4488ff" stroke-width="9" fill="none" stroke-linecap="round"/></svg>`,
-  },
-  {
-    id: 'arrow', label: 'Arrow', scale: 1.2,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="110" height="80" viewBox="0 0 110 80"><path d="M10,62 Q38,14 84,28" stroke="#ff6b9d" stroke-width="6" fill="none" stroke-linecap="round"/><polygon points="88,16 106,36 72,40" fill="#ff6b9d"/></svg>`,
   },
   {
     id: 'sun', label: 'Sun', scale: 1.0,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#fbbf24"/><line x1="50" y1="8" x2="50" y2="22" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="78" x2="50" y2="92" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="8" y1="50" x2="22" y2="50" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="78" y1="50" x2="92" y2="50" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="22" y1="22" x2="31" y2="31" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="69" y1="69" x2="78" y2="78" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="78" y1="22" x2="69" y2="31" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="31" y1="69" x2="22" y2="78" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/></svg>`,
   },
-  // washi tapes — displayed full-width
   {
-    id: 'washi-mint', label: 'Mint tape', scale: 1.5, wide: true,
+    id: 'arrow', label: 'Arrow', scale: 1.2,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="110" height="80" viewBox="0 0 110 80"><path d="M10,62 Q38,14 84,28" stroke="#ff6b9d" stroke-width="6" fill="none" stroke-linecap="round"/><polygon points="88,16 106,36 72,40" fill="#ff6b9d"/></svg>`,
+  },
+];
+
+// Washi tape stickers (displayed full-width)
+const TAPE_STICKERS: { id: string; label: string; svg: string; scale: number }[] = [
+  {
+    id: 'washi-mint', label: 'Mint tape', scale: 1.5,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40"><rect width="200" height="40" fill="#a5f3fc" opacity="0.88"/><circle cx="20" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="52" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="84" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="116" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="148" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="180" cy="20" r="7" fill="white" opacity="0.65"/></svg>`,
   },
   {
-    id: 'washi-pink', label: 'Pink tape', scale: 1.5, wide: true,
+    id: 'washi-pink', label: 'Pink tape', scale: 1.5,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40"><rect width="200" height="40" fill="#fda4af" opacity="0.88"/><line x1="0" y1="13" x2="200" y2="13" stroke="white" stroke-width="2" opacity="0.55"/><line x1="0" y1="27" x2="200" y2="27" stroke="white" stroke-width="2" opacity="0.55"/></svg>`,
   },
   {
-    id: 'washi-yellow', label: 'Yellow tape', scale: 1.5, wide: true,
+    id: 'washi-yellow', label: 'Yellow tape', scale: 1.5,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40"><rect width="200" height="40" fill="#fde68a" opacity="0.88"/><circle cx="20" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="48" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="76" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="104" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="132" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="160" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="188" cy="20" r="5" fill="white" opacity="0.6"/></svg>`,
   },
 ];
@@ -113,12 +118,12 @@ const TEXT_STICKERS: {
   fontFamily: string; fontSize: number;
   fontStyle?: 'italic'; fontWeight?: string;
 }[] = [
-  { id: 'memories', text: 'MEMORIES',    fill: '#cc3366', fontFamily: '"Courier New", monospace', fontSize: 28, fontWeight: 'bold' },
-  { id: 'xoxo',     text: 'xoxo',        fill: '#ff6b9d', fontFamily: 'Georgia, serif',            fontSize: 36, fontStyle: 'italic' },
-  { id: 'besties',  text: 'besties ♡',   fill: '#ff8c00', fontFamily: 'Georgia, serif',            fontSize: 26, fontStyle: 'italic' },
-  { id: 'forever',  text: 'forever',     fill: '#9b59b6', fontFamily: '"Palatino Linotype", serif', fontSize: 30, fontStyle: 'italic' },
-  { id: 'it2305',   text: 'IT2305',      fill: '#6b9eff', fontFamily: '"Arial Black", sans-serif',  fontSize: 30, fontWeight: 'bold' },
-  { id: 'classof',  text: "class of '26",fill: '#27ae60', fontFamily: 'Georgia, serif',            fontSize: 22, fontStyle: 'italic' },
+  { id: 'memories', text: 'MEMORIES',     fill: '#cc3366', fontFamily: '"Courier New", monospace', fontSize: 28, fontWeight: 'bold' },
+  { id: 'xoxo',     text: 'xoxo',         fill: '#ff6b9d', fontFamily: 'Georgia, serif',            fontSize: 36, fontStyle: 'italic' },
+  { id: 'besties',  text: 'besties ♡',    fill: '#ff8c00', fontFamily: 'Georgia, serif',            fontSize: 26, fontStyle: 'italic' },
+  { id: 'forever',  text: 'forever',      fill: '#9b59b6', fontFamily: '"Palatino Linotype", serif', fontSize: 30, fontStyle: 'italic' },
+  { id: 'it2305',   text: 'IT2305',       fill: '#6b9eff', fontFamily: '"Arial Black", sans-serif',  fontSize: 30, fontWeight: 'bold' },
+  { id: 'classof',  text: "class of '26", fill: '#27ae60', fontFamily: 'Georgia, serif',            fontSize: 22, fontStyle: 'italic' },
 ];
 
 const EMOJI_STICKERS = [
@@ -128,7 +133,7 @@ const EMOJI_STICKERS = [
   '🔥', '💯', '🌊', '🍭', '🎈', '🎀', '🌻', '🦄',
 ];
 
-// ─── Polaroid ────────────────────────────────────────────────────────────────
+// ─── Polaroid ─────────────────────────────────────────────────────────────────
 
 type PolaroidMeta = {
   type: 'polaroid';
@@ -139,10 +144,7 @@ type PolaroidMeta = {
 };
 
 async function makePolaroidUrl(
-  src: string,
-  label: string,
-  font: string,
-  cardColor: string,
+  src: string, label: string, font: string, cardColor: string,
 ): Promise<string> {
   return new Promise((resolve) => {
     const PAD = 14, IMG = 200, DATE_H = 44;
@@ -167,21 +169,27 @@ async function makePolaroidUrl(
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => { ctx.drawImage(img, PAD, PAD, IMG, IMG); stamp(); };
-    img.onerror = () => {
-      ctx.fillStyle = '#e0e0e0';
-      ctx.fillRect(PAD, PAD, IMG, IMG);
-      stamp();
-    };
+    img.onerror = () => { ctx.fillStyle = '#e0e0e0'; ctx.fillRect(PAD, PAD, IMG, IMG); stamp(); };
     img.src = src;
   });
 }
 
-// ─── Step 1: Photo Picker ────────────────────────────────────────────────────
+// ─── Shared UI ────────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5 my-2">
+      <div className="h-px flex-1 bg-white/10" />
+      <span className="text-[9px] font-semibold uppercase tracking-widest text-white/30">{children}</span>
+      <div className="h-px flex-1 bg-white/10" />
+    </div>
+  );
+}
+
+// ─── Step 1: Photo Picker ─────────────────────────────────────────────────────
 
 function PhotoPicker({
-  selected,
-  onToggle,
-  onStart,
+  selected, onToggle, onStart,
 }: {
   selected: Set<string>;
   onToggle: (src: string) => void;
@@ -192,21 +200,27 @@ function PhotoPicker({
   const pageSlides = slides.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
-    <div className="flex flex-col h-screen bg-black text-white">
+    <div className="flex flex-col h-screen bg-zinc-950 text-white">
+      {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10 flex-shrink-0">
         <Link href="/" className="text-white/50 hover:text-white transition-colors">
           <ChevronLeft className="w-5 h-5" />
         </Link>
         <div className="flex-1">
           <h1 className="font-semibold tracking-tight">Create a Scrapbook</h1>
-          <p className="text-xs text-white/40 mt-0.5">Pick up to {MAX_PICKS} photos, then arrange them your way</p>
+          <p className="text-xs text-white/40 mt-0.5">
+            Pick up to {MAX_PICKS} photos · page {page + 1} of {totalPages}
+          </p>
         </div>
         {selected.size > 0 && (
-          <span className="text-xs text-white/50">{selected.size} / {MAX_PICKS} selected</span>
+          <span className="text-xs font-medium text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
+            {selected.size} / {MAX_PICKS}
+          </span>
         )}
       </div>
 
-      <div className="flex-1 p-4 overflow-hidden">
+      {/* Grid */}
+      <div className="flex-1 overflow-hidden p-4">
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-w-6xl mx-auto">
           {pageSlides.map((s) => {
             const isSel = selected.has(s.src);
@@ -216,20 +230,20 @@ function PhotoPicker({
                 key={s.src}
                 onClick={() => onToggle(s.src)}
                 disabled={atMax && !isSel}
-                className={`aspect-square overflow-hidden rounded-lg relative group transition-all ${
+                className={`aspect-square overflow-hidden rounded-xl relative transition-all ${
                   isSel
                     ? 'ring-2 ring-white scale-95'
                     : atMax
-                      ? 'opacity-30 cursor-not-allowed'
-                      : 'hover:ring-2 hover:ring-white/50 hover:scale-95'
+                      ? 'opacity-25 cursor-not-allowed'
+                      : 'hover:ring-2 hover:ring-white/40 hover:scale-95 cursor-pointer'
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={s.src} alt="" crossOrigin="anonymous" className="w-full h-full object-cover" decoding="async" />
                 {isSel && (
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
-                      <Check className="w-4 h-4 text-black" />
+                    <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg">
+                      <Check className="w-3.5 h-3.5 text-black" />
                     </div>
                   </div>
                 )}
@@ -239,20 +253,23 @@ function PhotoPicker({
         </div>
       </div>
 
-      <div className="border-t border-white/10 px-6 py-3 flex items-center gap-4 flex-shrink-0 bg-black/80 backdrop-blur-sm">
-        <div className="flex items-center gap-2">
+      {/* Footer */}
+      <div className="border-t border-white/10 px-6 py-3 flex items-center gap-4 flex-shrink-0 bg-zinc-950/90 backdrop-blur-sm">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setPage((p) => p - 1)}
             disabled={page === 0}
-            className="px-3 py-1.5 rounded-md text-sm bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="px-3 py-1.5 rounded-lg text-sm bg-white/8 hover:bg-white/15 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             ← Prev
           </button>
-          <span className="text-xs text-white/40 w-20 text-center">Page {page + 1} of {totalPages}</span>
+          <span className="text-xs text-white/40 w-16 text-center tabular-nums">
+            {page + 1} / {totalPages}
+          </span>
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={page >= totalPages - 1}
-            className="px-3 py-1.5 rounded-md text-sm bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="px-3 py-1.5 rounded-lg text-sm bg-white/8 hover:bg-white/15 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           >
             Next →
           </button>
@@ -267,16 +284,16 @@ function PhotoPicker({
         <button
           onClick={onStart}
           disabled={selected.size === 0}
-          className="px-5 py-2 rounded-full bg-white text-black text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition-all"
+          className="px-5 py-2 rounded-full bg-white text-black text-sm font-semibold shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 active:scale-95 transition-all"
         >
-          Open in Scrapbook →
+          Open in Editor →
         </button>
       </div>
     </div>
   );
 }
 
-// ─── Step 2: Canvas Editor ───────────────────────────────────────────────────
+// ─── Step 2: Canvas Editor ────────────────────────────────────────────────────
 
 function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) {
   const canvasEl = useRef<HTMLCanvasElement>(null);
@@ -401,13 +418,13 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
     }
   };
 
-  const addSvgSticker = async (svg: string, scale: number) => {
+  const addSvgSticker = async (src: string, scale: number) => {
     const fc = fabricRef.current;
     if (!fc) return;
-    const img = await FabricImage.fromURL(svgToUrl(svg));
+    const img = await FabricImage.fromURL(src);
     img.scale(scale);
     img.set({
-      left: 80 + Math.random() * (CANVAS_W - 260),
+      left: 80 + Math.random() * (CANVAS_W - 240),
       top: 60 + Math.random() * (CANVAS_H - 160),
     });
     fc.add(img);
@@ -509,28 +526,59 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
     }
   };
 
+  const tabClass = (active: boolean) =>
+    `flex-1 py-2 text-xs font-medium transition-all border-b-2 ${
+      active
+        ? 'text-white border-white'
+        : 'text-white/40 border-transparent hover:text-white/70 hover:border-white/20'
+    }`;
+
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-white overflow-hidden">
-      {/* Top toolbar */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10 flex-shrink-0">
-        <button onClick={onBack} className="text-white/50 hover:text-white transition-colors">
-          <ChevronLeft className="w-5 h-5" />
+      {/* Toolbar */}
+      <div className="flex items-center gap-1.5 px-4 py-2 border-b border-white/10 flex-shrink-0 bg-zinc-900/60 backdrop-blur-sm">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 text-white/50 hover:text-white transition-colors mr-1"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span className="text-xs">Back</span>
         </button>
-        <span className="font-semibold text-sm mr-auto tracking-tight">Scrapbook</span>
-        <button onClick={addText} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-all text-xs">
+
+        <div className="w-px h-5 bg-white/10 mx-1" />
+        <span className="font-semibold text-sm tracking-tight mr-auto">Scrapbook</span>
+
+        <button
+          onClick={addText}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/8 transition-all text-xs"
+        >
           <Type className="w-3.5 h-3.5" /> Text
         </button>
-        <button onClick={deleteSelected} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-white/70 hover:text-red-400 hover:bg-white/10 transition-all text-xs">
+        <button
+          onClick={deleteSelected}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white/60 hover:text-red-400 hover:bg-white/8 transition-all text-xs"
+        >
           <Trash2 className="w-3.5 h-3.5" /> Delete
         </button>
-        <button onClick={clearAll} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-all text-xs">
+        <button
+          onClick={clearAll}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/8 transition-all text-xs"
+        >
           <X className="w-3.5 h-3.5" /> Clear
         </button>
+
         <div className="w-px h-5 bg-white/10 mx-1" />
-        <button onClick={download} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all">
+
+        <button
+          onClick={download}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/20 bg-white/8 hover:bg-white/15 text-white text-xs font-medium transition-all"
+        >
           <Download className="w-3.5 h-3.5" /> Save PNG
         </button>
-        <button onClick={share} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-black text-xs font-semibold hover:bg-white/90 transition-all">
+        <button
+          onClick={share}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold hover:bg-white/90 active:scale-95 transition-all"
+        >
           <Share2 className="w-3.5 h-3.5" /> Share
         </button>
       </div>
@@ -538,94 +586,100 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-52 border-r border-white/10 flex flex-col flex-shrink-0 overflow-hidden">
+        <div className="w-56 border-r border-white/10 flex flex-col flex-shrink-0 overflow-hidden bg-zinc-900/40">
 
           {/* Background */}
           <div className="p-3 border-b border-white/10 flex-shrink-0">
-            <p className="text-[10px] text-white/40 mb-2 font-medium uppercase tracking-wider">Background</p>
-            <div className="grid grid-cols-4 gap-1.5 mb-2">
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-white/30 mb-2">Background</p>
+            <div className="grid grid-cols-4 gap-1.5 mb-2.5">
               {BG_PRESETS.map((bg) => (
                 <button
                   key={bg.color}
                   title={bg.label}
                   onClick={() => setBackground(bg.color)}
-                  className={`w-8 h-8 rounded-md border-2 transition-all ${bgColor === bg.color ? 'border-white scale-110' : 'border-white/20 hover:border-white/60'}`}
+                  className={`w-9 h-9 rounded-lg transition-all ${
+                    bgColor === bg.color
+                      ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-900 scale-110'
+                      : 'ring-1 ring-white/10 hover:ring-white/40 hover:scale-105'
+                  }`}
                   style={{ background: bg.color }}
                 />
               ))}
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               <input
                 type="text"
                 placeholder="#hex"
                 value={customBg}
                 onChange={(e) => setCustomBg(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') applyCustomBg(); }}
-                className="flex-1 min-w-0 bg-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-white/30"
+                className="flex-1 min-w-0 bg-white/8 border border-white/10 rounded-lg px-2 py-1 text-xs text-white placeholder-white/25 outline-none focus:border-white/30 transition-colors"
               />
-              <button onClick={applyCustomBg} className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/70 transition-all flex-shrink-0">Apply</button>
+              <button
+                onClick={applyCustomBg}
+                className="px-2 py-1 bg-white/8 border border-white/10 hover:bg-white/15 rounded-lg text-xs text-white/60 hover:text-white transition-all flex-shrink-0"
+              >
+                Apply
+              </button>
             </div>
           </div>
 
-          {/* Photos / Stickers tabs */}
+          {/* Tabs */}
           <div className="flex border-b border-white/10 flex-shrink-0">
-            <button
-              onClick={() => setSidebarTab('photos')}
-              className={`flex-1 py-1.5 text-xs font-medium transition-all ${sidebarTab === 'photos' ? 'text-white bg-white/10' : 'text-white/40 hover:text-white/70'}`}
-            >
-              Photos
-            </button>
-            <button
-              onClick={() => setSidebarTab('stickers')}
-              className={`flex-1 py-1.5 text-xs font-medium transition-all ${sidebarTab === 'stickers' ? 'text-white bg-white/10' : 'text-white/40 hover:text-white/70'}`}
-            >
-              Stickers
-            </button>
+            <button onClick={() => setSidebarTab('photos')} className={tabClass(sidebarTab === 'photos')}>Photos</button>
+            <button onClick={() => setSidebarTab('stickers')} className={tabClass(sidebarTab === 'stickers')}>Stickers</button>
           </div>
 
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto min-h-0">
             {sidebarTab === 'photos' ? (
-              <div className="p-1.5 grid grid-cols-2 gap-1 content-start">
+              <div className="p-2 grid grid-cols-2 gap-1.5 content-start">
                 {srcs.map((src) => (
                   <button
                     key={src}
                     onClick={() => addPhoto(src)}
                     disabled={adding === src}
-                    className={`aspect-square overflow-hidden rounded group relative cursor-pointer ${adding === src ? 'opacity-40' : ''}`}
+                    className={`aspect-square overflow-hidden rounded-lg group relative transition-all ${
+                      adding === src ? 'opacity-40' : 'hover:ring-2 hover:ring-white/50 hover:scale-95'
+                    }`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" crossOrigin="anonymous" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200" />
+                    <img src={src} alt="" crossOrigin="anonymous" className="w-full h-full object-cover group-hover:brightness-110 transition-all" />
                     {adding === src && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs text-white">Adding…</div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      </div>
                     )}
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="p-2 space-y-2">
-                {/* Creative SVG stickers */}
-                <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest">Creative</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {SVG_STICKERS.filter((s) => !s.wide).map((s) => (
+              <div className="p-2">
+                {/* Friend's illustrated stickers */}
+                <SectionLabel>Illustrated</SectionLabel>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {FRIEND_STICKERS.map((s) => (
                     <button
                       key={s.id}
                       title={s.label}
-                      onClick={() => addSvgSticker(s.svg, s.scale)}
-                      className="aspect-square flex items-center justify-center bg-white/5 hover:bg-white/15 rounded p-1 transition-all hover:scale-105"
+                      onClick={() => addSvgSticker(s.src, s.scale)}
+                      className="aspect-square overflow-hidden rounded-xl bg-white/5 border border-white/10 hover:border-white/30 hover:bg-white/10 p-1.5 transition-all hover:scale-105 active:scale-95"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={svgToUrl(s.svg)} alt={s.label} className="w-full h-full object-contain" />
+                      <img src={s.src} alt={s.label} className="w-full h-full object-contain" />
                     </button>
                   ))}
                 </div>
-                <div className="space-y-1">
-                  {SVG_STICKERS.filter((s) => s.wide).map((s) => (
+
+                {/* Washi tape */}
+                <SectionLabel>Tape</SectionLabel>
+                <div className="space-y-1.5">
+                  {TAPE_STICKERS.map((s) => (
                     <button
                       key={s.id}
                       title={s.label}
-                      onClick={() => addSvgSticker(s.svg, s.scale)}
-                      className="w-full h-8 flex items-center justify-center bg-white/5 hover:bg-white/15 rounded overflow-hidden transition-all hover:scale-105"
+                      onClick={() => addSvgSticker(svgToUrl(s.svg), s.scale)}
+                      className="w-full h-9 overflow-hidden rounded-lg border border-white/10 hover:border-white/30 transition-all hover:scale-[1.02] active:scale-95"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={svgToUrl(s.svg)} alt={s.label} className="w-full h-full object-cover" />
@@ -633,14 +687,30 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                   ))}
                 </div>
 
+                {/* Shapes */}
+                <SectionLabel>Shapes</SectionLabel>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {SHAPE_STICKERS.map((s) => (
+                    <button
+                      key={s.id}
+                      title={s.label}
+                      onClick={() => addSvgSticker(svgToUrl(s.svg), s.scale)}
+                      className="aspect-square flex items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:border-white/30 hover:bg-white/10 p-1.5 transition-all hover:scale-110 active:scale-95"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={svgToUrl(s.svg)} alt={s.label} className="w-full h-full object-contain" />
+                    </button>
+                  ))}
+                </div>
+
                 {/* Text stickers */}
-                <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest pt-1">Text</p>
-                <div className="grid grid-cols-2 gap-1">
+                <SectionLabel>Text</SectionLabel>
+                <div className="grid grid-cols-2 gap-1.5">
                   {TEXT_STICKERS.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => addTextSticker(s.text, s.fill, s.fontFamily, s.fontSize, s.fontStyle, s.fontWeight)}
-                      className="px-1 py-2 rounded bg-white/5 hover:bg-white/15 text-xs text-center transition-all hover:scale-105 truncate"
+                      className="px-1 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/30 hover:bg-white/10 text-xs text-center transition-all hover:scale-105 active:scale-95 truncate"
                       style={{ color: s.fill, fontFamily: s.fontFamily, fontStyle: s.fontStyle, fontWeight: s.fontWeight }}
                     >
                       {s.text}
@@ -648,14 +718,14 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                   ))}
                 </div>
 
-                {/* Emoji stickers */}
-                <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest pt-1">Emoji</p>
+                {/* Emoji */}
+                <SectionLabel>Emoji</SectionLabel>
                 <div className="grid grid-cols-4 gap-1">
                   {EMOJI_STICKERS.map((emoji) => (
                     <button
                       key={emoji}
                       onClick={() => addEmojiSticker(emoji)}
-                      className="aspect-square flex items-center justify-center text-xl hover:bg-white/10 rounded transition-all hover:scale-110"
+                      className="aspect-square flex items-center justify-center text-xl rounded-lg hover:bg-white/10 transition-all hover:scale-110 active:scale-95"
                     >
                       {emoji}
                     </button>
@@ -665,10 +735,10 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
             )}
           </div>
 
-          {/* Edit polaroid panel — shown when a polaroid is selected */}
+          {/* Edit polaroid panel */}
           {selSrc !== null && (
-            <div className="border-t border-white/10 p-3 flex-shrink-0">
-              <p className="text-[10px] text-white/40 mb-2 font-medium uppercase tracking-wider">Edit Polaroid</p>
+            <div className="border-t-2 border-violet-500/30 bg-violet-950/20 p-3 flex-shrink-0">
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-violet-300/60 mb-2.5">Edit Polaroid</p>
 
               <label className="text-xs text-white/50 block mb-1">Caption</label>
               <input
@@ -677,53 +747,70 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                 onChange={(e) => setEditLabel(e.target.value)}
                 onBlur={() => rerenderPolaroid(editLabel, editFont, editCardColor)}
                 onKeyDown={(e) => { if (e.key === 'Enter') rerenderPolaroid(editLabel, editFont, editCardColor); }}
-                className="w-full bg-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:ring-1 focus:ring-white/30 mb-2"
+                className="w-full bg-white/8 border border-white/15 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-violet-400/50 transition-colors mb-2"
               />
 
               <label className="text-xs text-white/50 block mb-1">Font</label>
               <select
                 value={editFont}
                 onChange={(e) => { setEditFont(e.target.value); rerenderPolaroid(editLabel, e.target.value, editCardColor); }}
-                className="w-full bg-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:ring-1 focus:ring-white/30 mb-2"
+                className="w-full bg-white/8 border border-white/15 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-violet-400/50 transition-colors mb-2"
               >
                 {FONTS.map((f) => (
-                  <option key={f.value} value={f.value} style={{ background: '#1a1a1a' }}>{f.label}</option>
+                  <option key={f.value} value={f.value} style={{ background: '#1a1a2e' }}>{f.label}</option>
                 ))}
               </select>
 
               <label className="text-xs text-white/50 block mb-1">Card Color</label>
-              <div className="grid grid-cols-4 gap-1 mb-1.5">
+              <div className="grid grid-cols-4 gap-1.5 mb-2">
                 {CARD_PRESETS.map((color) => (
                   <button
                     key={color}
                     onClick={() => { setEditCardColor(color); rerenderPolaroid(editLabel, editFont, color); }}
-                    className={`w-8 h-8 rounded border-2 transition-all ${editCardColor === color ? 'border-white scale-110' : 'border-white/20 hover:border-white/50'}`}
+                    className={`w-9 h-9 rounded-lg transition-all ${
+                      editCardColor === color
+                        ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-zinc-900 scale-110'
+                        : 'ring-1 ring-white/10 hover:ring-white/40 hover:scale-105'
+                    }`}
                     style={{ background: color }}
                   />
                 ))}
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 <input
                   type="text"
                   placeholder="#hex"
                   value={customCard}
                   onChange={(e) => setCustomCard(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') applyCustomCard(); }}
-                  className="flex-1 min-w-0 bg-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-white/30"
+                  className="flex-1 min-w-0 bg-white/8 border border-white/15 rounded-lg px-2 py-1 text-xs text-white placeholder-white/25 outline-none focus:border-violet-400/50 transition-colors"
                 />
-                <button onClick={applyCustomCard} className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/70 transition-all flex-shrink-0">Apply</button>
+                <button
+                  onClick={applyCustomCard}
+                  className="px-2 py-1 bg-white/8 border border-white/15 hover:bg-white/15 rounded-lg text-xs text-white/60 hover:text-white transition-all flex-shrink-0"
+                >
+                  Apply
+                </button>
               </div>
-              {rerendering && <p className="text-[10px] text-white/30 mt-1.5 text-center">Updating…</p>}
+              {rerendering && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <div className="w-3 h-3 border border-violet-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[10px] text-violet-300/50">Updating…</span>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Canvas area */}
         <div
-          className="flex-1 overflow-auto flex items-center justify-center p-6"
-          style={{ background: 'repeating-linear-gradient(45deg,#1c1c1c 0px,#1c1c1c 10px,#222 10px,#222 20px)' }}
+          className="flex-1 overflow-auto flex items-center justify-center p-8"
+          style={{ background: 'repeating-linear-gradient(45deg,#1a1a1a 0px,#1a1a1a 10px,#1f1f1f 10px,#1f1f1f 20px)' }}
         >
-          <div className="shadow-[0_0_0_2px_rgba(255,255,255,0.25),0_8px_40px_rgba(0,0,0,0.8)]">
+          <div
+            className="transition-shadow duration-300"
+            style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.15), 0 12px 60px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.6)' }}
+          >
             <canvas ref={canvasEl} />
           </div>
         </div>
@@ -732,7 +819,7 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
   );
 }
 
-// ─── Root ────────────────────────────────────────────────────────────────────
+// ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function ScrapbookEditor() {
   const [view, setView] = useState<'picking' | 'editing'>('picking');
@@ -741,11 +828,8 @@ export default function ScrapbookEditor() {
   const toggleSelect = (src: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(src)) {
-        next.delete(src);
-      } else if (next.size < MAX_PICKS) {
-        next.add(src);
-      }
+      if (next.has(src)) { next.delete(src); }
+      else if (next.size < MAX_PICKS) { next.add(src); }
       return next;
     });
   };
@@ -753,6 +837,5 @@ export default function ScrapbookEditor() {
   if (view === 'picking') {
     return <PhotoPicker selected={selected} onToggle={toggleSelect} onStart={() => setView('editing')} />;
   }
-
   return <CanvasEditor srcs={Array.from(selected)} onBack={() => setView('picking')} />;
 }
