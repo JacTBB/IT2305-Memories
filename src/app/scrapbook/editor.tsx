@@ -69,6 +69,7 @@ async function makePolaroidUrl(src: string, dateLabel: string): Promise<string> 
 export default function ScrapbookEditor() {
   const canvasEl = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
+  const polaroidCache = useRef<Map<string, string>>(new Map());
   const [bgColor, setBgColor] = useState(BACKGROUNDS[0].color);
   const [adding, setAdding] = useState<string | null>(null);
 
@@ -93,10 +94,14 @@ export default function ScrapbookEditor() {
 
   const addPhoto = async (src: string) => {
     const fc = fabricRef.current;
-    if (!fc || adding) return;
+    if (!fc || adding === src) return;
     setAdding(src);
     try {
-      const polaroidUrl = await makePolaroidUrl(src, parseDateLabel(src));
+      let polaroidUrl = polaroidCache.current.get(src);
+      if (!polaroidUrl) {
+        polaroidUrl = await makePolaroidUrl(src, parseDateLabel(src));
+        polaroidCache.current.set(src, polaroidUrl);
+      }
       const img = await FabricImage.fromURL(polaroidUrl);
       img.scale(0.5);
       img.set({
@@ -246,6 +251,7 @@ export default function ScrapbookEditor() {
                 <img
                   src={s.src}
                   alt=""
+                  crossOrigin="anonymous"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
                   loading="lazy"
                   decoding="async"
