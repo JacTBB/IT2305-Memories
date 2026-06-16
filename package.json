@@ -41,6 +41,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.32.0",
+    "fabric": "^7.4.0",
     "framer-motion": "^12.4.3",
     "lucide-react": "^0.407.0",
     "minio": "^8.0.1",
