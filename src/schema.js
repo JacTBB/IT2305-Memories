@@ -115,3 +115,13 @@ export const posts = pgTable('post', {
   createdTimestamp: timestamp('createdTimestamp').notNull(),
   star: boolean('star').default(false),
 });
+
+export const scrapbooks = pgTable('scrapbook', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  data: text('data').notNull(),
+  thumbnail: text('thumbnail'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
+});
