@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 'use client';
 
 import { Canvas, FabricImage, IText, Shadow } from 'fabric';
@@ -22,14 +23,54 @@ function parseDateLabel(src: string): string {
 const CANVAS_W = 900;
 const CANVAS_H = 620;
 const MAX_PICKS = 15;
+const PAGE_SIZE = 24;
 
-const BACKGROUNDS = [
-  { label: 'Dark',  color: '#111118' },
-  { label: 'Paper', color: '#d4b896' },
-  { label: 'White', color: '#f5f5f0' },
+const FONTS = [
+  { label: 'Typewriter', value: '"Courier New", monospace' },
+  { label: 'Classic',    value: 'Georgia, serif' },
+  { label: 'Modern',     value: 'system-ui, sans-serif' },
+  { label: 'Playful',    value: '"Comic Sans MS", cursive' },
+  { label: 'Bold',       value: '"Arial Black", sans-serif' },
+  { label: 'Elegant',    value: '"Palatino Linotype", serif' },
 ];
 
-async function makePolaroidUrl(src: string, dateLabel: string): Promise<string> {
+const BG_PRESETS = [
+  { label: 'Dark',   color: '#111118' },
+  { label: 'Paper',  color: '#d4b896' },
+  { label: 'White',  color: '#f5f5f0' },
+  { label: 'Navy',   color: '#1a2744' },
+  { label: 'Forest', color: '#1a3a2a' },
+  { label: 'Rose',   color: '#3d1a20' },
+  { label: 'Slate',  color: '#2d3748' },
+  { label: 'Warm',   color: '#2d1f10' },
+];
+
+const CARD_PRESETS = [
+  '#ffffff', '#f5f0e8', '#fff0f0', '#f0f0ff',
+  '#f0fff0', '#fffde7', '#fce4ec', '#e3f2fd',
+];
+
+const STICKERS = [
+  '❤️', '🌟', '✨', '🎉', '🎊', '🥳', '😍', '🤩',
+  '💫', '🌈', '🦋', '🌸', '🌺', '🍀', '☀️', '🌙',
+  '🎵', '🎶', '📸', '💌', '🎁', '🏆', '👑', '💎',
+  '🔥', '💯', '🌊', '🍭', '🎈', '🎀', '🌻', '🦄',
+];
+
+type PolaroidMeta = {
+  type: 'polaroid';
+  src: string;
+  label: string;
+  font: string;
+  cardColor: string;
+};
+
+async function makePolaroidUrl(
+  src: string,
+  label: string,
+  font: string,
+  cardColor: string,
+): Promise<string> {
   return new Promise((resolve) => {
     const PAD = 14, IMG = 200, DATE_H = 44;
     const W = IMG + PAD * 2, H = IMG + PAD + DATE_H;
@@ -39,14 +80,14 @@ async function makePolaroidUrl(src: string, dateLabel: string): Promise<string> 
     offscreen.height = H * SCALE;
     const ctx = offscreen.getContext('2d')!;
     ctx.scale(SCALE, SCALE);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = cardColor;
     ctx.fillRect(0, 0, W, H);
 
     const stamp = () => {
-      ctx.fillStyle = '#aaaaaa';
-      ctx.font = '12px "Courier New", monospace';
+      ctx.fillStyle = '#666666';
+      ctx.font = `13px ${font}`;
       ctx.textAlign = 'center';
-      ctx.fillText(dateLabel, W / 2, IMG + PAD + DATE_H / 2 + 5);
+      ctx.fillText(label, W / 2, IMG + PAD + DATE_H / 2 + 5);
       resolve(offscreen.toDataURL('image/png'));
     };
 
@@ -61,8 +102,6 @@ async function makePolaroidUrl(src: string, dateLabel: string): Promise<string> 
     img.src = src;
   });
 }
-
-const PAGE_SIZE = 24;
 
 // ─── Step 1: Photo Picker ────────────────────────────────────────────────────
 
@@ -81,7 +120,6 @@ function PhotoPicker({
 
   return (
     <div className="flex flex-col h-screen bg-black text-white">
-      {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10 flex-shrink-0">
         <Link href="/" className="text-white/50 hover:text-white transition-colors">
           <ChevronLeft className="w-5 h-5" />
@@ -95,7 +133,6 @@ function PhotoPicker({
         )}
       </div>
 
-      {/* Grid — current page only */}
       <div className="flex-1 p-4 overflow-hidden">
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-w-6xl mx-auto">
           {pageSlides.map((s) => {
@@ -135,9 +172,7 @@ function PhotoPicker({
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div className="border-t border-white/10 px-6 py-3 flex items-center gap-4 flex-shrink-0 bg-black/80 backdrop-blur-sm">
-        {/* Pagination */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setPage((p) => p - 1)}
@@ -178,26 +213,53 @@ function PhotoPicker({
 
 // ─── Step 2: Canvas Editor ───────────────────────────────────────────────────
 
-function CanvasEditor({
-  srcs,
-  onBack,
-}: {
-  srcs: string[];
-  onBack: () => void;
-}) {
+function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) {
   const canvasEl = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
   const polaroidCache = useRef<Map<string, string>>(new Map());
-  const [bgColor, setBgColor] = useState(BACKGROUNDS[0].color);
+  const selObjRef = useRef<(FabricImage & { data?: PolaroidMeta }) | null>(null);
+
+  const [bgColor, setBgColor] = useState(BG_PRESETS[0].color);
+  const [customBg, setCustomBg] = useState('');
+  const [sidebarTab, setSidebarTab] = useState<'photos' | 'stickers'>('photos');
   const [adding, setAdding] = useState<string | null>(null);
+  const [rerendering, setRerendering] = useState(false);
+
+  const [selSrc, setSelSrc] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState('');
+  const [editFont, setEditFont] = useState(FONTS[0].value);
+  const [editCardColor, setEditCardColor] = useState('#ffffff');
+  const [customCard, setCustomCard] = useState('');
 
   useEffect(() => {
     if (!canvasEl.current) return;
     const fc = new Canvas(canvasEl.current, {
       width: CANVAS_W,
       height: CANVAS_H,
-      backgroundColor: BACKGROUNDS[0].color,
+      backgroundColor: BG_PRESETS[0].color,
     });
+
+    const syncSel = () => {
+      const obj = fc.getActiveObject() as FabricImage & { data?: PolaroidMeta };
+      if (obj?.data?.type === 'polaroid') {
+        selObjRef.current = obj;
+        setSelSrc(obj.data.src);
+        setEditLabel(obj.data.label);
+        setEditFont(obj.data.font);
+        setEditCardColor(obj.data.cardColor);
+      } else {
+        selObjRef.current = null;
+        setSelSrc(null);
+      }
+    };
+
+    fc.on('selection:created', syncSel);
+    fc.on('selection:updated', syncSel);
+    fc.on('selection:cleared', () => {
+      selObjRef.current = null;
+      setSelSrc(null);
+    });
+
     fabricRef.current = fc;
     return () => { fc.dispose(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -210,18 +272,28 @@ function CanvasEditor({
     fc.renderAll();
   };
 
+  const applyCustomBg = () => {
+    const v = customBg.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) { setBackground(v); setCustomBg(''); }
+  };
+
   const addPhoto = async (src: string) => {
     const fc = fabricRef.current;
     if (!fc || adding === src) return;
     setAdding(src);
+    const label = parseDateLabel(src);
+    const font = FONTS[0].value;
+    const cardColor = '#ffffff';
     try {
-      let polaroidUrl = polaroidCache.current.get(src);
+      const cacheKey = `${src}||${label}||${font}||${cardColor}`;
+      let polaroidUrl = polaroidCache.current.get(cacheKey);
       if (!polaroidUrl) {
-        polaroidUrl = await makePolaroidUrl(src, parseDateLabel(src));
-        polaroidCache.current.set(src, polaroidUrl);
+        polaroidUrl = await makePolaroidUrl(src, label, font, cardColor);
+        polaroidCache.current.set(cacheKey, polaroidUrl);
       }
-      const img = await FabricImage.fromURL(polaroidUrl);
+      const img = await FabricImage.fromURL(polaroidUrl) as FabricImage & { data: PolaroidMeta };
       img.scale(0.5);
+      img.data = { type: 'polaroid', src, label, font, cardColor };
       img.set({
         left: 80 + Math.random() * (CANVAS_W - 280),
         top: 60 + Math.random() * (CANVAS_H - 220),
@@ -234,6 +306,55 @@ function CanvasEditor({
     } finally {
       setAdding(null);
     }
+  };
+
+  const rerenderPolaroid = async (label: string, font: string, cardColor: string) => {
+    const fc = fabricRef.current;
+    const obj = selObjRef.current;
+    if (!fc || !obj || !obj.data) return;
+    const { src } = obj.data;
+    setRerendering(true);
+    try {
+      const cacheKey = `${src}||${label}||${font}||${cardColor}`;
+      let polaroidUrl = polaroidCache.current.get(cacheKey);
+      if (!polaroidUrl) {
+        polaroidUrl = await makePolaroidUrl(src, label, font, cardColor);
+        polaroidCache.current.set(cacheKey, polaroidUrl);
+      }
+      const newImg = await FabricImage.fromURL(polaroidUrl) as FabricImage & { data: PolaroidMeta };
+      newImg.scaleX = obj.scaleX;
+      newImg.scaleY = obj.scaleY;
+      newImg.set({
+        left: obj.left,
+        top: obj.top,
+        angle: obj.angle,
+        shadow: obj.shadow,
+      });
+      newImg.data = { type: 'polaroid', src, label, font, cardColor };
+      selObjRef.current = newImg;
+      setEditLabel(label);
+      setEditFont(font);
+      setEditCardColor(cardColor);
+      fc.remove(obj);
+      fc.add(newImg);
+      fc.setActiveObject(newImg);
+      fc.renderAll();
+    } finally {
+      setRerendering(false);
+    }
+  };
+
+  const addSticker = (emoji: string) => {
+    const fc = fabricRef.current;
+    if (!fc) return;
+    const sticker = new IText(emoji, {
+      left: CANVAS_W / 2 - 30,
+      top: CANVAS_H / 2 - 30,
+      fontSize: 60,
+    });
+    fc.add(sticker);
+    fc.setActiveObject(sticker);
+    fc.renderAll();
   };
 
   const addText = () => {
@@ -265,6 +386,8 @@ function CanvasEditor({
     fc.clear();
     fc.set('backgroundColor', bgColor);
     fc.renderAll();
+    selObjRef.current = null;
+    setSelSrc(null);
   };
 
   const download = () => {
@@ -292,6 +415,15 @@ function CanvasEditor({
     download();
   };
 
+  const applyCustomCard = () => {
+    const v = customCard.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+      setEditCardColor(v);
+      rerenderPolaroid(editLabel, editFont, v);
+      setCustomCard('');
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-white overflow-hidden">
       {/* Top toolbar */}
@@ -300,21 +432,6 @@ function CanvasEditor({
           <ChevronLeft className="w-5 h-5" />
         </button>
         <span className="font-semibold text-sm mr-auto tracking-tight">Scrapbook</span>
-
-        <div className="flex gap-1.5 items-center">
-          {BACKGROUNDS.map((bg) => (
-            <button
-              key={bg.color}
-              title={bg.label}
-              onClick={() => setBackground(bg.color)}
-              className={`w-5 h-5 rounded-full border-2 transition-all ${bgColor === bg.color ? 'border-white scale-110' : 'border-white/30 hover:border-white/60'}`}
-              style={{ background: bg.color }}
-            />
-          ))}
-        </div>
-
-        <div className="w-px h-5 bg-white/10 mx-1" />
-
         <button onClick={addText} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-all text-xs">
           <Type className="w-3.5 h-3.5" /> Text
         </button>
@@ -324,9 +441,7 @@ function CanvasEditor({
         <button onClick={clearAll} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-all text-xs">
           <X className="w-3.5 h-3.5" /> Clear
         </button>
-
         <div className="w-px h-5 bg-white/10 mx-1" />
-
         <button onClick={download} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all">
           <Download className="w-3.5 h-3.5" /> Save PNG
         </button>
@@ -337,37 +452,157 @@ function CanvasEditor({
 
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Photo sidebar — only the chosen photos */}
-        <div className="w-40 border-r border-white/10 flex flex-col flex-shrink-0">
-          <p className="px-3 py-2 text-xs text-white/40 border-b border-white/10 flex-shrink-0">
-            Click to add to canvas
-          </p>
-          <div className="flex-1 overflow-y-auto p-1.5 grid grid-cols-2 gap-1 content-start">
-            {srcs.map((src) => (
-              <button
-                key={src}
-                onClick={() => addPhoto(src)}
-                disabled={adding === src}
-                className={`aspect-square overflow-hidden rounded group relative cursor-pointer ${adding === src ? 'opacity-40' : ''}`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt=""
-                  crossOrigin="anonymous"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+        {/* Sidebar */}
+        <div className="w-52 border-r border-white/10 flex flex-col flex-shrink-0 overflow-hidden">
+
+          {/* Background */}
+          <div className="p-3 border-b border-white/10 flex-shrink-0">
+            <p className="text-[10px] text-white/40 mb-2 font-medium uppercase tracking-wider">Background</p>
+            <div className="grid grid-cols-4 gap-1.5 mb-2">
+              {BG_PRESETS.map((bg) => (
+                <button
+                  key={bg.color}
+                  title={bg.label}
+                  onClick={() => setBackground(bg.color)}
+                  className={`w-8 h-8 rounded-md border-2 transition-all ${bgColor === bg.color ? 'border-white scale-110' : 'border-white/20 hover:border-white/50'}`}
+                  style={{ background: bg.color }}
                 />
-                {adding === src && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs text-white">
-                    Adding…
-                  </div>
-                )}
+              ))}
+            </div>
+            <div className="flex gap-1">
+              <input
+                type="text"
+                placeholder="#hex"
+                value={customBg}
+                onChange={(e) => setCustomBg(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyCustomBg(); }}
+                className="flex-1 min-w-0 bg-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-white/30"
+              />
+              <button
+                onClick={applyCustomBg}
+                className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/70 transition-all flex-shrink-0"
+              >
+                Apply
               </button>
-            ))}
+            </div>
           </div>
+
+          {/* Photos / Stickers tabs */}
+          <div className="flex border-b border-white/10 flex-shrink-0">
+            <button
+              onClick={() => setSidebarTab('photos')}
+              className={`flex-1 py-1.5 text-xs font-medium transition-all ${sidebarTab === 'photos' ? 'text-white bg-white/10' : 'text-white/40 hover:text-white/70'}`}
+            >
+              Photos
+            </button>
+            <button
+              onClick={() => setSidebarTab('stickers')}
+              className={`flex-1 py-1.5 text-xs font-medium transition-all ${sidebarTab === 'stickers' ? 'text-white bg-white/10' : 'text-white/40 hover:text-white/70'}`}
+            >
+              Stickers
+            </button>
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {sidebarTab === 'photos' ? (
+              <div className="p-1.5 grid grid-cols-2 gap-1 content-start">
+                {srcs.map((src) => (
+                  <button
+                    key={src}
+                    onClick={() => addPhoto(src)}
+                    disabled={adding === src}
+                    className={`aspect-square overflow-hidden rounded group relative cursor-pointer ${adding === src ? 'opacity-40' : ''}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt=""
+                      crossOrigin="anonymous"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                    />
+                    {adding === src && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs text-white">Adding…</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-2 grid grid-cols-4 gap-1 content-start">
+                {STICKERS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => addSticker(emoji)}
+                    className="aspect-square flex items-center justify-center text-xl hover:bg-white/10 rounded transition-all hover:scale-110"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Edit polaroid panel — shown when a polaroid is selected */}
+          {selSrc !== null && (
+            <div className="border-t border-white/10 p-3 flex-shrink-0">
+              <p className="text-[10px] text-white/40 mb-2 font-medium uppercase tracking-wider">Edit Polaroid</p>
+
+              <label className="text-xs text-white/50 block mb-1">Caption</label>
+              <input
+                type="text"
+                value={editLabel}
+                onChange={(e) => setEditLabel(e.target.value)}
+                onBlur={() => rerenderPolaroid(editLabel, editFont, editCardColor)}
+                onKeyDown={(e) => { if (e.key === 'Enter') rerenderPolaroid(editLabel, editFont, editCardColor); }}
+                className="w-full bg-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:ring-1 focus:ring-white/30 mb-2"
+              />
+
+              <label className="text-xs text-white/50 block mb-1">Font</label>
+              <select
+                value={editFont}
+                onChange={(e) => { setEditFont(e.target.value); rerenderPolaroid(editLabel, e.target.value, editCardColor); }}
+                className="w-full bg-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:ring-1 focus:ring-white/30 mb-2"
+              >
+                {FONTS.map((f) => (
+                  <option key={f.value} value={f.value} style={{ background: '#1a1a1a' }}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+
+              <label className="text-xs text-white/50 block mb-1">Card Color</label>
+              <div className="grid grid-cols-4 gap-1 mb-1.5">
+                {CARD_PRESETS.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => { setEditCardColor(color); rerenderPolaroid(editLabel, editFont, color); }}
+                    className={`w-8 h-8 rounded border-2 transition-all ${editCardColor === color ? 'border-white scale-110' : 'border-white/20 hover:border-white/50'}`}
+                    style={{ background: color }}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  placeholder="#hex"
+                  value={customCard}
+                  onChange={(e) => setCustomCard(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') applyCustomCard(); }}
+                  className="flex-1 min-w-0 bg-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-white/30"
+                />
+                <button
+                  onClick={applyCustomCard}
+                  className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/70 transition-all flex-shrink-0"
+                >
+                  Apply
+                </button>
+              </div>
+              {rerendering && <p className="text-[10px] text-white/30 mt-1.5 text-center">Updating…</p>}
+            </div>
+          )}
         </div>
 
-        {/* Canvas */}
+        {/* Canvas area */}
         <div
           className="flex-1 overflow-auto flex items-center justify-center p-6"
           style={{ background: 'repeating-linear-gradient(45deg,#1c1c1c 0px,#1c1c1c 10px,#222 10px,#222 20px)' }}
@@ -411,7 +646,7 @@ export default function ScrapbookEditor() {
 
   return (
     <CanvasEditor
-      srcs={[...selected]}
+      srcs={Array.from(selected)}
       onBack={() => setView('picking')}
     />
   );
