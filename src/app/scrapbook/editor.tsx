@@ -62,6 +62,8 @@ async function makePolaroidUrl(src: string, dateLabel: string): Promise<string> 
   });
 }
 
+const PAGE_SIZE = 24;
+
 // ─── Step 1: Photo Picker ────────────────────────────────────────────────────
 
 function PhotoPicker({
@@ -73,6 +75,10 @@ function PhotoPicker({
   onToggle: (src: string) => void;
   onStart: () => void;
 }) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(slides.length / PAGE_SIZE);
+  const pageSlides = slides.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   return (
     <div className="flex flex-col h-screen bg-black text-white">
       {/* Header */}
@@ -89,10 +95,10 @@ function PhotoPicker({
         )}
       </div>
 
-      {/* Grid */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Grid — current page only */}
+      <div className="flex-1 p-4 overflow-hidden">
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-w-6xl mx-auto">
-          {slides.map((s) => {
+          {pageSlides.map((s) => {
             const isSel = selected.has(s.src);
             const atMax = selected.size >= MAX_PICKS;
             return (
@@ -114,7 +120,6 @@ function PhotoPicker({
                   alt=""
                   crossOrigin="anonymous"
                   className="w-full h-full object-cover"
-                  loading="lazy"
                   decoding="async"
                 />
                 {isSel && (
@@ -131,12 +136,34 @@ function PhotoPicker({
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-white/10 px-6 py-4 flex items-center justify-between flex-shrink-0 bg-black/80 backdrop-blur-sm">
-        <span className="text-sm text-white/50">
+      <div className="border-t border-white/10 px-6 py-3 flex items-center gap-4 flex-shrink-0 bg-black/80 backdrop-blur-sm">
+        {/* Pagination */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage((p) => p - 1)}
+            disabled={page === 0}
+            className="px-3 py-1.5 rounded-md text-sm bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          >
+            ← Prev
+          </button>
+          <span className="text-xs text-white/40 w-20 text-center">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= totalPages - 1}
+            className="px-3 py-1.5 rounded-md text-sm bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          >
+            Next →
+          </button>
+        </div>
+
+        <span className="text-sm text-white/40 flex-1">
           {selected.size === 0
             ? 'Select photos to get started'
             : `${selected.size} photo${selected.size > 1 ? 's' : ''} selected`}
         </span>
+
         <button
           onClick={onStart}
           disabled={selected.size === 0}
