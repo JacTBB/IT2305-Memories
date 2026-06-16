@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+/* eslint-disable max-lines, quotes */
 'use client';
 
 import { Canvas, FabricImage, IText, Shadow } from 'fabric';
@@ -34,15 +34,20 @@ const FONTS = [
   { label: 'Elegant',    value: '"Palatino Linotype", serif' },
 ];
 
+// 12 background presets: 4 light → 4 medium → 4 dark
 const BG_PRESETS = [
-  { label: 'Dark',   color: '#111118' },
+  { label: 'Blush',  color: '#fce4ec' },
+  { label: 'Sky',    color: '#dbeafe' },
+  { label: 'Mint',   color: '#dcfce7' },
+  { label: 'Lemon',  color: '#fef9c3' },
   { label: 'Paper',  color: '#d4b896' },
-  { label: 'White',  color: '#f5f5f0' },
-  { label: 'Navy',   color: '#1a2744' },
-  { label: 'Forest', color: '#1a3a2a' },
-  { label: 'Rose',   color: '#3d1a20' },
-  { label: 'Slate',  color: '#2d3748' },
-  { label: 'Warm',   color: '#2d1f10' },
+  { label: 'Lilac',  color: '#e9d5ff' },
+  { label: 'Coral',  color: '#fed7aa' },
+  { label: 'Teal',   color: '#99f6e4' },
+  { label: 'Navy',   color: '#1e3a5f' },
+  { label: 'Forest', color: '#14532d' },
+  { label: 'Plum',   color: '#4a044e' },
+  { label: 'Dark',   color: '#111118' },
 ];
 
 const CARD_PRESETS = [
@@ -50,12 +55,80 @@ const CARD_PRESETS = [
   '#f0fff0', '#fffde7', '#fce4ec', '#e3f2fd',
 ];
 
-const STICKERS = [
+// ─── Sticker definitions ─────────────────────────────────────────────────────
+
+const svgToUrl = (s: string) =>
+  `data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}`;
+
+const SVG_STICKERS: { id: string; label: string; svg: string; scale: number; wide?: true }[] = [
+  {
+    id: 'heart', label: 'Heart', scale: 1.2,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="90" viewBox="0 0 100 90"><path d="M50,80 C25,60 5,45 5,28 C5,14 18,4 32,4 C40,4 47,8 50,14 C53,8 60,4 68,4 C82,4 95,14 95,28 C95,45 75,60 50,80Z" fill="#ff6b9d"/></svg>`,
+  },
+  {
+    id: 'camera', label: 'Camera', scale: 1.0,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect x="5" y="22" width="110" height="65" rx="10" fill="#6b9eff"/><polygon points="38,22 46,10 74,10 82,22" fill="#5a8aee"/><circle cx="60" cy="54" r="22" fill="white" opacity="0.2"/><circle cx="60" cy="54" r="14" fill="white" opacity="0.25"/><circle cx="60" cy="54" r="8" fill="#2a4a99"/><circle cx="90" cy="32" r="6" fill="#ffd700"/></svg>`,
+  },
+  {
+    id: 'flower', label: 'Flower', scale: 1.0,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><ellipse cx="50" cy="22" rx="11" ry="19" fill="#ffb3de"/><ellipse cx="50" cy="78" rx="11" ry="19" fill="#ffb3de"/><ellipse cx="22" cy="50" rx="19" ry="11" fill="#ffb3de"/><ellipse cx="78" cy="50" rx="19" ry="11" fill="#ffb3de"/><ellipse cx="29" cy="29" rx="11" ry="19" fill="#ffb3de" transform="rotate(45,29,29)"/><ellipse cx="71" cy="29" rx="11" ry="19" fill="#ffb3de" transform="rotate(-45,71,29)"/><ellipse cx="29" cy="71" rx="11" ry="19" fill="#ffb3de" transform="rotate(-45,29,71)"/><ellipse cx="71" cy="71" rx="11" ry="19" fill="#ffb3de" transform="rotate(45,71,71)"/><circle cx="50" cy="50" r="17" fill="#ffd700"/><circle cx="50" cy="50" r="9" fill="#ffaa00"/></svg>`,
+  },
+  {
+    id: 'bow', label: 'Bow', scale: 1.0,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><path d="M60,40 C55,28 28,8 8,18 C-2,24 2,40 16,44 C32,50 57,44 60,40Z" fill="#ff6b9d"/><path d="M60,40 C65,28 92,8 112,18 C122,24 118,40 104,44 C88,50 63,44 60,40Z" fill="#ff6b9d"/><circle cx="60" cy="40" r="11" fill="#cc3377"/><path d="M55,50 C50,60 46,70 44,78" stroke="#ff6b9d" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M65,50 C70,60 74,70 76,78" stroke="#ff6b9d" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg>`,
+  },
+  {
+    id: 'cloud', label: 'Cloud', scale: 1.2,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><circle cx="38" cy="52" r="24" fill="#bfdbfe"/><circle cx="64" cy="44" r="30" fill="#bfdbfe"/><circle cx="92" cy="55" r="20" fill="#bfdbfe"/><rect x="14" y="56" width="98" height="22" fill="#bfdbfe"/></svg>`,
+  },
+  {
+    id: 'rainbow', label: 'Rainbow', scale: 1.2,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="72" viewBox="0 0 120 72"><path d="M8,70 Q60,-18 112,70" stroke="#ff4444" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M16,70 Q60,-6 104,70" stroke="#ff8c00" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M24,70 Q60,6 96,70" stroke="#ffd700" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M32,70 Q60,18 88,70" stroke="#44cc44" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M40,70 Q60,30 80,70" stroke="#4488ff" stroke-width="9" fill="none" stroke-linecap="round"/></svg>`,
+  },
+  {
+    id: 'arrow', label: 'Arrow', scale: 1.2,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="110" height="80" viewBox="0 0 110 80"><path d="M10,62 Q38,14 84,28" stroke="#ff6b9d" stroke-width="6" fill="none" stroke-linecap="round"/><polygon points="88,16 106,36 72,40" fill="#ff6b9d"/></svg>`,
+  },
+  {
+    id: 'sun', label: 'Sun', scale: 1.0,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="20" fill="#fbbf24"/><line x1="50" y1="8" x2="50" y2="22" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="50" y1="78" x2="50" y2="92" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="8" y1="50" x2="22" y2="50" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="78" y1="50" x2="92" y2="50" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="22" y1="22" x2="31" y2="31" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="69" y1="69" x2="78" y2="78" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="78" y1="22" x2="69" y2="31" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><line x1="31" y1="69" x2="22" y2="78" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/></svg>`,
+  },
+  // washi tapes — displayed full-width
+  {
+    id: 'washi-mint', label: 'Mint tape', scale: 1.5, wide: true,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40"><rect width="200" height="40" fill="#a5f3fc" opacity="0.88"/><circle cx="20" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="52" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="84" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="116" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="148" cy="20" r="7" fill="white" opacity="0.65"/><circle cx="180" cy="20" r="7" fill="white" opacity="0.65"/></svg>`,
+  },
+  {
+    id: 'washi-pink', label: 'Pink tape', scale: 1.5, wide: true,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40"><rect width="200" height="40" fill="#fda4af" opacity="0.88"/><line x1="0" y1="13" x2="200" y2="13" stroke="white" stroke-width="2" opacity="0.55"/><line x1="0" y1="27" x2="200" y2="27" stroke="white" stroke-width="2" opacity="0.55"/></svg>`,
+  },
+  {
+    id: 'washi-yellow', label: 'Yellow tape', scale: 1.5, wide: true,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40"><rect width="200" height="40" fill="#fde68a" opacity="0.88"/><circle cx="20" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="48" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="76" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="104" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="132" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="160" cy="20" r="5" fill="white" opacity="0.6"/><circle cx="188" cy="20" r="5" fill="white" opacity="0.6"/></svg>`,
+  },
+];
+
+const TEXT_STICKERS: {
+  id: string; text: string; fill: string;
+  fontFamily: string; fontSize: number;
+  fontStyle?: 'italic'; fontWeight?: string;
+}[] = [
+  { id: 'memories', text: 'MEMORIES',    fill: '#cc3366', fontFamily: '"Courier New", monospace', fontSize: 28, fontWeight: 'bold' },
+  { id: 'xoxo',     text: 'xoxo',        fill: '#ff6b9d', fontFamily: 'Georgia, serif',            fontSize: 36, fontStyle: 'italic' },
+  { id: 'besties',  text: 'besties ♡',   fill: '#ff8c00', fontFamily: 'Georgia, serif',            fontSize: 26, fontStyle: 'italic' },
+  { id: 'forever',  text: 'forever',     fill: '#9b59b6', fontFamily: '"Palatino Linotype", serif', fontSize: 30, fontStyle: 'italic' },
+  { id: 'it2305',   text: 'IT2305',      fill: '#6b9eff', fontFamily: '"Arial Black", sans-serif',  fontSize: 30, fontWeight: 'bold' },
+  { id: 'classof',  text: "class of '26",fill: '#27ae60', fontFamily: 'Georgia, serif',            fontSize: 22, fontStyle: 'italic' },
+];
+
+const EMOJI_STICKERS = [
   '❤️', '🌟', '✨', '🎉', '🎊', '🥳', '😍', '🤩',
   '💫', '🌈', '🦋', '🌸', '🌺', '🍀', '☀️', '🌙',
   '🎵', '🎶', '📸', '💌', '🎁', '🏆', '👑', '💎',
   '🔥', '💯', '🌊', '🍭', '🎈', '🎀', '🌻', '🦄',
 ];
+
+// ─── Polaroid ────────────────────────────────────────────────────────────────
 
 type PolaroidMeta = {
   type: 'polaroid';
@@ -152,13 +225,7 @@ function PhotoPicker({
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={s.src}
-                  alt=""
-                  crossOrigin="anonymous"
-                  className="w-full h-full object-cover"
-                  decoding="async"
-                />
+                <img src={s.src} alt="" crossOrigin="anonymous" className="w-full h-full object-cover" decoding="async" />
                 {isSel && (
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                     <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
@@ -181,9 +248,7 @@ function PhotoPicker({
           >
             ← Prev
           </button>
-          <span className="text-xs text-white/40 w-20 text-center">
-            Page {page + 1} of {totalPages}
-          </span>
+          <span className="text-xs text-white/40 w-20 text-center">Page {page + 1} of {totalPages}</span>
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={page >= totalPages - 1}
@@ -255,10 +320,7 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
 
     fc.on('selection:created', syncSel);
     fc.on('selection:updated', syncSel);
-    fc.on('selection:cleared', () => {
-      selObjRef.current = null;
-      setSelSrc(null);
-    });
+    fc.on('selection:cleared', () => { selObjRef.current = null; setSelSrc(null); });
 
     fabricRef.current = fc;
     return () => { fc.dispose(); };
@@ -324,12 +386,7 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
       const newImg = await FabricImage.fromURL(polaroidUrl) as FabricImage & { data: PolaroidMeta };
       newImg.scaleX = obj.scaleX;
       newImg.scaleY = obj.scaleY;
-      newImg.set({
-        left: obj.left,
-        top: obj.top,
-        angle: obj.angle,
-        shadow: obj.shadow,
-      });
+      newImg.set({ left: obj.left, top: obj.top, angle: obj.angle, shadow: obj.shadow });
       newImg.data = { type: 'polaroid', src, label, font, cardColor };
       selObjRef.current = newImg;
       setEditLabel(label);
@@ -344,12 +401,44 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
     }
   };
 
-  const addSticker = (emoji: string) => {
+  const addSvgSticker = async (svg: string, scale: number) => {
+    const fc = fabricRef.current;
+    if (!fc) return;
+    const img = await FabricImage.fromURL(svgToUrl(svg));
+    img.scale(scale);
+    img.set({
+      left: 80 + Math.random() * (CANVAS_W - 260),
+      top: 60 + Math.random() * (CANVAS_H - 160),
+    });
+    fc.add(img);
+    fc.setActiveObject(img);
+    fc.renderAll();
+  };
+
+  const addTextSticker = (
+    text: string, fill: string, fontFamily: string, fontSize: number,
+    fontStyle?: 'italic', fontWeight?: string,
+  ) => {
+    const fc = fabricRef.current;
+    if (!fc) return;
+    const t = new IText(text, {
+      left: 80 + Math.random() * (CANVAS_W - 200),
+      top: 60 + Math.random() * (CANVAS_H - 100),
+      fontSize, fill, fontFamily,
+      ...(fontStyle ? { fontStyle } : {}),
+      ...(fontWeight ? { fontWeight } : {}),
+    });
+    fc.add(t);
+    fc.setActiveObject(t);
+    fc.renderAll();
+  };
+
+  const addEmojiSticker = (emoji: string) => {
     const fc = fabricRef.current;
     if (!fc) return;
     const sticker = new IText(emoji, {
-      left: CANVAS_W / 2 - 30,
-      top: CANVAS_H / 2 - 30,
+      left: 80 + Math.random() * (CANVAS_W - 160),
+      top: 60 + Math.random() * (CANVAS_H - 120),
       fontSize: 60,
     });
     fc.add(sticker);
@@ -361,12 +450,8 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
     const fc = fabricRef.current;
     if (!fc) return;
     const text = new IText('Your text here', {
-      left: CANVAS_W / 2 - 80,
-      top: CANVAS_H / 2 - 20,
-      fontSize: 28,
-      fontFamily: 'Georgia, serif',
-      fill: '#ffffff',
-      fontStyle: 'italic',
+      left: CANVAS_W / 2 - 80, top: CANVAS_H / 2 - 20,
+      fontSize: 28, fontFamily: 'Georgia, serif', fill: '#ffffff', fontStyle: 'italic',
     });
     fc.add(text);
     fc.setActiveObject(text);
@@ -464,7 +549,7 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                   key={bg.color}
                   title={bg.label}
                   onClick={() => setBackground(bg.color)}
-                  className={`w-8 h-8 rounded-md border-2 transition-all ${bgColor === bg.color ? 'border-white scale-110' : 'border-white/20 hover:border-white/50'}`}
+                  className={`w-8 h-8 rounded-md border-2 transition-all ${bgColor === bg.color ? 'border-white scale-110' : 'border-white/20 hover:border-white/60'}`}
                   style={{ background: bg.color }}
                 />
               ))}
@@ -478,12 +563,7 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                 onKeyDown={(e) => { if (e.key === 'Enter') applyCustomBg(); }}
                 className="flex-1 min-w-0 bg-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-white/30"
               />
-              <button
-                onClick={applyCustomBg}
-                className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/70 transition-all flex-shrink-0"
-              >
-                Apply
-              </button>
+              <button onClick={applyCustomBg} className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/70 transition-all flex-shrink-0">Apply</button>
             </div>
           </div>
 
@@ -515,12 +595,7 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                     className={`aspect-square overflow-hidden rounded group relative cursor-pointer ${adding === src ? 'opacity-40' : ''}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={src}
-                      alt=""
-                      crossOrigin="anonymous"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
-                    />
+                    <img src={src} alt="" crossOrigin="anonymous" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200" />
                     {adding === src && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs text-white">Adding…</div>
                     )}
@@ -528,16 +603,64 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                 ))}
               </div>
             ) : (
-              <div className="p-2 grid grid-cols-4 gap-1 content-start">
-                {STICKERS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => addSticker(emoji)}
-                    className="aspect-square flex items-center justify-center text-xl hover:bg-white/10 rounded transition-all hover:scale-110"
-                  >
-                    {emoji}
-                  </button>
-                ))}
+              <div className="p-2 space-y-2">
+                {/* Creative SVG stickers */}
+                <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest">Creative</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {SVG_STICKERS.filter((s) => !s.wide).map((s) => (
+                    <button
+                      key={s.id}
+                      title={s.label}
+                      onClick={() => addSvgSticker(s.svg, s.scale)}
+                      className="aspect-square flex items-center justify-center bg-white/5 hover:bg-white/15 rounded p-1 transition-all hover:scale-105"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={svgToUrl(s.svg)} alt={s.label} className="w-full h-full object-contain" />
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  {SVG_STICKERS.filter((s) => s.wide).map((s) => (
+                    <button
+                      key={s.id}
+                      title={s.label}
+                      onClick={() => addSvgSticker(s.svg, s.scale)}
+                      className="w-full h-8 flex items-center justify-center bg-white/5 hover:bg-white/15 rounded overflow-hidden transition-all hover:scale-105"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={svgToUrl(s.svg)} alt={s.label} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Text stickers */}
+                <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest pt-1">Text</p>
+                <div className="grid grid-cols-2 gap-1">
+                  {TEXT_STICKERS.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => addTextSticker(s.text, s.fill, s.fontFamily, s.fontSize, s.fontStyle, s.fontWeight)}
+                      className="px-1 py-2 rounded bg-white/5 hover:bg-white/15 text-xs text-center transition-all hover:scale-105 truncate"
+                      style={{ color: s.fill, fontFamily: s.fontFamily, fontStyle: s.fontStyle, fontWeight: s.fontWeight }}
+                    >
+                      {s.text}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Emoji stickers */}
+                <p className="text-[9px] text-white/30 font-medium uppercase tracking-widest pt-1">Emoji</p>
+                <div className="grid grid-cols-4 gap-1">
+                  {EMOJI_STICKERS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => addEmojiSticker(emoji)}
+                      className="aspect-square flex items-center justify-center text-xl hover:bg-white/10 rounded transition-all hover:scale-110"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -564,9 +687,7 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                 className="w-full bg-white/10 rounded px-2 py-1.5 text-xs text-white outline-none focus:ring-1 focus:ring-white/30 mb-2"
               >
                 {FONTS.map((f) => (
-                  <option key={f.value} value={f.value} style={{ background: '#1a1a1a' }}>
-                    {f.label}
-                  </option>
+                  <option key={f.value} value={f.value} style={{ background: '#1a1a1a' }}>{f.label}</option>
                 ))}
               </select>
 
@@ -590,12 +711,7 @@ function CanvasEditor({ srcs, onBack }: { srcs: string[]; onBack: () => void }) 
                   onKeyDown={(e) => { if (e.key === 'Enter') applyCustomCard(); }}
                   className="flex-1 min-w-0 bg-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-white/30"
                 />
-                <button
-                  onClick={applyCustomCard}
-                  className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/70 transition-all flex-shrink-0"
-                >
-                  Apply
-                </button>
+                <button onClick={applyCustomCard} className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs text-white/70 transition-all flex-shrink-0">Apply</button>
               </div>
               {rerendering && <p className="text-[10px] text-white/30 mt-1.5 text-center">Updating…</p>}
             </div>
@@ -635,19 +751,8 @@ export default function ScrapbookEditor() {
   };
 
   if (view === 'picking') {
-    return (
-      <PhotoPicker
-        selected={selected}
-        onToggle={toggleSelect}
-        onStart={() => setView('editing')}
-      />
-    );
+    return <PhotoPicker selected={selected} onToggle={toggleSelect} onStart={() => setView('editing')} />;
   }
 
-  return (
-    <CanvasEditor
-      srcs={Array.from(selected)}
-      onBack={() => setView('picking')}
-    />
-  );
+  return <CanvasEditor srcs={Array.from(selected)} onBack={() => setView('picking')} />;
 }
