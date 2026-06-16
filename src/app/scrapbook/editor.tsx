@@ -256,8 +256,8 @@ export default function ScrapbookEditor() {
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 overflow-auto flex items-center justify-center bg-zinc-900 p-6">
-          <div className="shadow-2xl ring-1 ring-white/10">
+        <div className="flex-1 overflow-auto flex items-center justify-center p-6" style={{ background: 'repeating-linear-gradient(45deg, #1c1c1c 0px, #1c1c1c 10px, #222 10px, #222 20px)' }}>
+          <div className="shadow-[0_0_0_2px_rgba(255,255,255,0.25),0_8px_40px_rgba(0,0,0,0.8)]">
             <canvas ref={canvasEl} />
           </div>
         </div>
