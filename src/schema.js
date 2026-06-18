@@ -99,6 +99,14 @@ export const authenticators = pgTable(
   }),
 );
 
+export const reactions = pgTable('reaction', {
+  id: serial('id').primaryKey(),
+  photoId: text('photoId').notNull(),
+  emoji: text('emoji').notNull(),
+  ip: text('ip').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
 export const posts = pgTable('post', {
   id: serial('id').primaryKey(),
   message: text('message').notNull(),
@@ -106,4 +114,14 @@ export const posts = pgTable('post', {
   authorId: text('authorId').references(() => users.id, { onDelete: 'no action' }),
   createdTimestamp: timestamp('createdTimestamp').notNull(),
   star: boolean('star').default(false),
+});
+
+export const scrapbooks = pgTable('scrapbook', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  data: text('data').notNull(),
+  thumbnail: text('thumbnail'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().notNull(),
 });

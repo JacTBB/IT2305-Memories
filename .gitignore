@@ -39,3 +39,9 @@ keyfile2.json
 next-env.d.ts
 
 superpowers/
+
+# Photos served from MinIO CDN
+public/*.jpg
+public/*.jpeg
+public/*.png
+!public/SIT.png
