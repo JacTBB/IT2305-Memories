@@ -336,8 +336,9 @@ function PhotoPicker({
   userId: string | null;
 }) {
   const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(slides.length / PAGE_SIZE);
-  const pageSlides = slides.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const photoSlides = slides.filter((s) => s.type === 'image');
+  const totalPages = Math.ceil(photoSlides.length / PAGE_SIZE);
+  const pageSlides = photoSlides.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-white">

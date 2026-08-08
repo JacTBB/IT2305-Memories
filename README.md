@@ -24,10 +24,18 @@ A class memories website for IT2305. Browse photos, react to your favourites, an
 
 ## Photo CDN
 
-Photos are served from `https://cdn.jactbb.com/it2305-memories` and are **not** stored in this repository. To upload new photos, use the upload script:
+Photos and videos are served from `https://cdn.jactbb.com/it2305-memories` and are **not** stored in this repository. To upload new media, use the upload script:
 
 ```bash
 node scripts/upload-images.mjs
 ```
 
-Place photos in `public/` before running. The script reads MinIO credentials from `.env.local`.
+Place files in `public/` before running. The script reads MinIO credentials from `.env.local`.
+
+Uploading to the bucket alone doesn't make new media show up on the site — `src/lib/slides.ts` is a generated list of everything currently in the bucket. After uploading, regenerate it:
+
+```bash
+node scripts/generate-slides.mjs
+```
+
+This lists the bucket, classifies each file as `image` or `video` by extension, and rewrites `slides.ts`. Known non-memory assets (`next.svg`, `vercel.svg`, `SIT.png`) are excluded automatically — edit the `EXCLUDE` set in the script to exclude others.

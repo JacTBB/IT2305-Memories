@@ -1,12 +1,12 @@
 'use client';
 
-import { ChevronLeft, Frame, Grid3x3 } from 'lucide-react';
+import { ChevronLeft, Frame, Grid3x3, Play } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import { Reactions } from '@/components/reactions';
 import { Lightbox } from '@/components/ui/lightbox';
-import { slides } from '@/lib/slides';
+import { slides, type Slide } from '@/lib/slides';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -39,14 +39,14 @@ function polaroidTransform(src: string): string {
 // Build ordered groups: only dated photos, sorted by date then by original order
 const datedSlides = slides.filter((s) => parseDateKey(s.src) !== null);
 
-const grouped: Record<string, string[]> = {};
+const grouped: Record<string, Slide[]> = {};
 for (const slide of datedSlides) {
   const key = parseDateKey(slide.src)!;
   if (!grouped[key]) grouped[key] = [];
-  grouped[key].push(slide.src);
+  grouped[key].push(slide);
 }
 const sortedDates = Object.keys(grouped).sort();
-const allDatedSrcs = sortedDates.flatMap((d) => grouped[d]);
+const allDatedSlides = sortedDates.flatMap((d) => grouped[d]);
 
 export default function TimelinePage() {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -62,11 +62,11 @@ export default function TimelinePage() {
   }, []);
 
   const onPrev = useCallback(() => {
-    setLightboxIdx((i) => i === null ? null : (i - 1 + allDatedSrcs.length) % allDatedSrcs.length);
+    setLightboxIdx((i) => i === null ? null : (i - 1 + allDatedSlides.length) % allDatedSlides.length);
   }, []);
 
   const onNext = useCallback(() => {
-    setLightboxIdx((i) => i === null ? null : (i + 1) % allDatedSrcs.length);
+    setLightboxIdx((i) => i === null ? null : (i + 1) % allDatedSlides.length);
   }, []);
 
   let globalIdx = 0;
@@ -104,7 +104,7 @@ export default function TimelinePage() {
       {viewMode === 'polaroid' && (
         <div className="max-w-6xl mx-auto px-8 py-16">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8 sm:gap-12">
-            {allDatedSrcs.map((src, idx) => {
+            {allDatedSlides.map(({ src, type }, idx) => {
               const dateKey = parseDateKey(src);
               const isHovered = hoveredPolaroid === idx;
               return (
@@ -131,13 +131,30 @@ export default function TimelinePage() {
                       transform: isHovered ? 'scale(1.08)' : 'scale(1)',
                     }}
                   >
-                    <img
-                      src={src}
-                      alt=""
-                      className="w-full aspect-square object-cover block"
-                      loading="lazy"
-                      decoding="async"
-                    />
+                    <div className="relative w-full aspect-square">
+                      {type === 'video' ? (
+                        <video
+                          src={src}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="w-full h-full object-cover block"
+                        />
+                      ) : (
+                        <img
+                          src={src}
+                          alt=""
+                          className="w-full h-full object-cover block"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
+                      {type === 'video' && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <Play className="w-8 h-8 text-white/90 fill-white/90" />
+                        </div>
+                      )}
+                    </div>
                     <p className="text-center text-gray-400 text-xs mt-2 font-mono leading-none tracking-tight">
                       {dateKey ? formatDateKey(dateKey) : ''}
                     </p>
@@ -153,9 +170,9 @@ export default function TimelinePage() {
       {viewMode === 'grid' && (
         <div className="max-w-4xl mx-auto px-6 py-10 space-y-14">
           {sortedDates.map((dateKey) => {
-            const srcs = grouped[dateKey];
+            const daySlides = grouped[dateKey];
             const startIdx = globalIdx;
-            globalIdx += srcs.length;
+            globalIdx += daySlides.length;
 
             return (
               <section key={dateKey}>
@@ -168,7 +185,7 @@ export default function TimelinePage() {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {srcs.map((src, i) => {
+                  {daySlides.map(({ src, type }, i) => {
                     const idx = startIdx + i;
                     const photoId = decodeURIComponent(src.split('/').pop() ?? '');
                     return (
@@ -177,13 +194,28 @@ export default function TimelinePage() {
                           onClick={() => setLightboxIdx(idx)}
                           className="aspect-square overflow-hidden rounded-lg cursor-zoom-in group relative"
                         >
-                          <img
-                            src={src}
-                            alt=""
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            loading="lazy"
-                            decoding="async"
-                          />
+                          {type === 'video' ? (
+                            <video
+                              src={src}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <img
+                              src={src}
+                              alt=""
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          )}
+                          {type === 'video' && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                              <Play className="w-6 h-6 text-white/90 fill-white/90" />
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                         </button>
                         {allCounts !== null && (
@@ -205,7 +237,7 @@ export default function TimelinePage() {
 
       {lightboxIdx !== null && (
         <Lightbox
-          srcs={allDatedSrcs}
+          slides={allDatedSlides}
           index={lightboxIdx}
           onClose={() => setLightboxIdx(null)}
           onPrev={onPrev}

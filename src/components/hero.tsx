@@ -65,7 +65,7 @@ const beams = [
   },
 ];
 
-const allSrcs = slides.map((s) => s.src);
+const carouselSlides = slides.filter((s) => s.type === 'image');
 
 export const Hero = ({
   children,
@@ -80,11 +80,11 @@ export const Hero = ({
   const [surpriseIdx, setSurpriseIdx] = useState<number | null>(null);
 
   const surprisePrev = useCallback(() => {
-    setSurpriseIdx((i) => i === null ? null : (i - 1 + allSrcs.length) % allSrcs.length);
+    setSurpriseIdx((i) => i === null ? null : (i - 1 + slides.length) % slides.length);
   }, []);
 
   const surpriseNext = useCallback(() => {
-    setSurpriseIdx((i) => i === null ? null : (i + 1) % allSrcs.length);
+    setSurpriseIdx((i) => i === null ? null : (i + 1) % slides.length);
   }, []);
 
   useEffect(() => {
@@ -204,7 +204,7 @@ export const Hero = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <Carousel slides={slides} />
+          <Carousel slides={carouselSlides} />
         </motion.div>
 
         <motion.div
@@ -214,7 +214,7 @@ export const Hero = ({
           className="flex items-center gap-3 mt-4"
         >
           <button
-            onClick={() => setSurpriseIdx(Math.floor(Math.random() * allSrcs.length))}
+            onClick={() => setSurpriseIdx(Math.floor(Math.random() * slides.length))}
             className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-medium backdrop-blur-sm border border-white/20 transition-all hover:scale-105"
           >
             ✨ Surprise Me
@@ -236,7 +236,7 @@ export const Hero = ({
 
       {surpriseIdx !== null && (
         <Lightbox
-          srcs={allSrcs}
+          slides={slides}
           index={surpriseIdx}
           onClose={() => setSurpriseIdx(null)}
           onPrev={surprisePrev}

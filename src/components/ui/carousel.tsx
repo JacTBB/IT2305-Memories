@@ -5,12 +5,9 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { Reactions } from '@/components/reactions';
 import { Lightbox } from '@/components/ui/lightbox';
+import type { Slide } from '@/lib/slides';
 
-interface SlideData {
-  src: string;
-}
-
-export function Carousel({ slides }: { slides: SlideData[] }) {
+export function Carousel({ slides }: { slides: Slide[] }) {
   const [order, setOrder] = useState(() => slides.map((_, i) => i));
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -41,11 +38,11 @@ export function Carousel({ slides }: { slides: SlideData[] }) {
     goTo(0);
   };
 
-  const orderedSrcs = order.map((i) => slides[i].src);
+  const orderedSlides = order.map((i) => slides[i]);
   const prevI = (current - 1 + order.length) % order.length;
   const nextI = (current + 1) % order.length;
   const visible = new Set([prevI, current, nextI]);
-  const currentPhotoId = decodeURIComponent(orderedSrcs[current].split('/').pop() ?? '');
+  const currentPhotoId = decodeURIComponent(orderedSlides[current].src.split('/').pop() ?? '');
 
   return (
     <>
@@ -144,7 +141,7 @@ export function Carousel({ slides }: { slides: SlideData[] }) {
 
       {lightboxOpen && (
         <Lightbox
-          srcs={orderedSrcs}
+          slides={orderedSlides}
           index={current}
           onClose={() => setLightboxOpen(false)}
           onPrev={goPrev}

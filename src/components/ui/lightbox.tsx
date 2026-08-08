@@ -4,17 +4,18 @@ import { ChevronLeft, ChevronRight, Download, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { Reactions } from '@/components/reactions';
+import type { Slide } from '@/lib/slides';
 
 interface LightboxProps {
-  srcs: string[];
+  slides: Slide[];
   index: number;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
 }
 
-export function Lightbox({ srcs, index, onClose, onPrev, onNext }: LightboxProps) {
-  const src = srcs[index];
+export function Lightbox({ slides, index, onClose, onPrev, onNext }: LightboxProps) {
+  const { src, type } = slides[index];
   const photoId = decodeURIComponent(src.split('/').pop() ?? '');
 
   useEffect(() => {
@@ -57,16 +58,25 @@ export function Lightbox({ srcs, index, onClose, onPrev, onNext }: LightboxProps
         className="flex flex-col items-center gap-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <img
-          src={src}
-          alt=""
-          className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
-        />
+        {type === 'video' ? (
+          <video
+            src={src}
+            controls
+            autoPlay
+            className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+          />
+        ) : (
+          <img
+            src={src}
+            alt=""
+            className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+          />
+        )}
         <Reactions photoId={photoId} />
       </div>
 
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/50 text-sm font-mono select-none pointer-events-none">
-        {index + 1} / {srcs.length}
+        {index + 1} / {slides.length}
       </div>
 
       <button
