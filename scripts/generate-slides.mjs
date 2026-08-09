@@ -28,27 +28,57 @@ const BUCKET = 'it2305-memories';
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 const VIDEO_EXTS = new Set(['.mp4', '.mov', '.webm']);
-const EXCLUDE = new Set(['next.svg', 'vercel.svg', 'SIT.png']);
 const HERO_ORDER = ['Hero1.jpg', 'Hero2.jpg', 'Hero3.jpg', 'Hero4.jpg'];
+
+const excludePath = path.join(__dirname, '..', 'excluded-media.json');
+const EXCLUDE = new Set(JSON.parse(fs.readFileSync(excludePath, 'utf-8')));
+
+// Some photos were uploaded as both .jpg and .webp (same shot, two formats) —
+// when that happens for an image, keep only the .webp copy. Video files are
+// left alone since a .jpg + .mov pair with the same stem is an iPhone Live
+// Photo (still frame + its video), not a duplicate.
+function dedupeImageVariants(items) {
+  const byStem = new Map();
+  for (const item of items) {
+    const stem = item.name.slice(0, item.name.length - path.extname(item.name).length);
+    if (!byStem.has(stem)) byStem.set(stem, []);
+    byStem.get(stem).push(item);
+  }
+
+  const result = [];
+  for (const group of byStem.values()) {
+    const images = group.filter((g) => g.type === 'image');
+    const videos = group.filter((g) => g.type === 'video');
+    result.push(...videos);
+    if (images.length <= 1) {
+      result.push(...images);
+      continue;
+    }
+    const webp = images.find((g) => g.name.toLowerCase().endsWith('.webp'));
+    result.push(webp ?? images[0]);
+  }
+  return result;
+}
 
 const stream = client.listObjectsV2(BUCKET, '', true);
 const objects = [];
 stream.on('data', (obj) => objects.push(obj.name));
 stream.on('error', (err) => { console.error('ERROR', err); process.exit(1); });
 stream.on('end', () => {
-  const media = objects
-    .filter((name) => !EXCLUDE.has(name) && !HERO_ORDER.includes(name))
-    .map((name) => {
-      const ext = path.extname(name).toLowerCase();
-      if (IMAGE_EXTS.has(ext)) return { name, type: 'image' };
-      if (VIDEO_EXTS.has(ext)) return { name, type: 'video' };
-      return null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  const media = dedupeImageVariants(
+    objects
+      .filter((name) => !EXCLUDE.has(name) && !HERO_ORDER.includes(name))
+      .map((name) => {
+        const ext = path.extname(name).toLowerCase();
+        if (IMAGE_EXTS.has(ext)) return { name, type: 'image' };
+        if (VIDEO_EXTS.has(ext)) return { name, type: 'video' };
+        return null;
+      })
+      .filter(Boolean),
+  ).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
   const entries = [
-    ...HERO_ORDER.map((name) => ({ name, type: 'image' })),
+    ...HERO_ORDER.filter((name) => !EXCLUDE.has(name)).map((name) => ({ name, type: 'image' })),
     ...media,
   ];
 
