@@ -2,7 +2,7 @@
 
 import { ChevronLeft, Frame, Grid3x3, MapPin, Play } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Reactions } from '@/components/reactions';
 import { Lightbox } from '@/components/ui/lightbox';
@@ -39,15 +39,6 @@ function polaroidTransform(src: string): string {
 // Build ordered groups: only dated photos, sorted by date then by original order
 const datedSlides = slides.filter((s) => parseDateKey(s.src) !== null);
 
-const grouped: Record<string, Slide[]> = {};
-for (const slide of datedSlides) {
-  const key = parseDateKey(slide.src)!;
-  if (!grouped[key]) grouped[key] = [];
-  grouped[key].push(slide);
-}
-const sortedDates = Object.keys(grouped).sort();
-const allDatedSlides = sortedDates.flatMap((d) => grouped[d]);
-
 // Only a subset of photos carry EXIF GPS (mostly the dated .jpg originals —
 // plain .webp uploads and videos don't), so this group is necessarily partial.
 const locatedSlides = slides.filter((s) => s.location);
@@ -62,13 +53,13 @@ for (const slide of locatedSlides) {
   }
   groupedByLocation[loc].push(slide);
 }
-const allLocatedSlides = locationOrder.flatMap((l) => groupedByLocation[l]);
 
 export default function TimelinePage() {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [allCounts, setAllCounts] = useState<Record<string, Record<string, number>> | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'polaroid' | 'location'>('polaroid');
   const [hoveredPolaroid, setHoveredPolaroid] = useState<number | null>(null);
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/reactions/all')
@@ -77,21 +68,44 @@ export default function TimelinePage() {
       .catch(() => setAllCounts({}));
   }, []);
 
+  // Dated slides, narrowed to the selected location (if any). Feeds the
+  // polaroid and grid views.
+  const { grouped, sortedDates, allDatedSlides } = useMemo(() => {
+    const filtered = locationFilter
+      ? datedSlides.filter((s) => s.location === locationFilter)
+      : datedSlides;
+
+    const grouped: Record<string, Slide[]> = {};
+    for (const slide of filtered) {
+      const key = parseDateKey(slide.src)!;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(slide);
+    }
+    const sortedDates = Object.keys(grouped).sort();
+    const allDatedSlides = sortedDates.flatMap((d) => grouped[d]);
+
+    return { grouped, sortedDates, allDatedSlides };
+  }, [locationFilter]);
+
+  // Locations to render in the location view, narrowed to the selection.
+  const filteredLocationOrder = locationFilter ? [locationFilter] : locationOrder;
+  const allLocatedSlides = filteredLocationOrder.flatMap((l) => groupedByLocation[l]);
+
   const onPrev = useCallback(() => {
     setLightboxIdx((i) => i === null ? null : (i - 1 + allDatedSlides.length) % allDatedSlides.length);
-  }, []);
+  }, [allDatedSlides.length]);
 
   const onNext = useCallback(() => {
     setLightboxIdx((i) => i === null ? null : (i + 1) % allDatedSlides.length);
-  }, []);
+  }, [allDatedSlides.length]);
 
   const onLocPrev = useCallback(() => {
     setLightboxIdx((i) => i === null ? null : (i - 1 + allLocatedSlides.length) % allLocatedSlides.length);
-  }, []);
+  }, [allLocatedSlides.length]);
 
   const onLocNext = useCallback(() => {
     setLightboxIdx((i) => i === null ? null : (i + 1) % allLocatedSlides.length);
-  }, []);
+  }, [allLocatedSlides.length]);
 
   let globalIdx = 0;
 
@@ -105,9 +119,11 @@ export default function TimelinePage() {
         <div className="flex-1">
           <h1 className="text-lg font-semibold tracking-tight">Timeline</h1>
           <p className="text-xs text-white/40">
-            {viewMode === 'location'
-              ? `${locatedSlides.length} photos across ${locationOrder.length} places`
-              : `${datedSlides.length} photos across ${sortedDates.length} days`}
+            {locationFilter
+              ? `${(viewMode === 'location' ? allLocatedSlides : allDatedSlides).length} photos in ${locationFilter}`
+              : viewMode === 'location'
+                ? `${locatedSlides.length} photos across ${locationOrder.length} places`
+                : `${datedSlides.length} photos across ${sortedDates.length} days`}
           </p>
         </div>
         <div className="flex gap-1 bg-white/5 rounded-lg p-1">
@@ -135,9 +151,46 @@ export default function TimelinePage() {
         </div>
       </div>
 
+      {/* Location filter */}
+      {locationOrder.length > 0 && (
+        <div className="border-b border-white/10 px-6 py-3 overflow-x-auto">
+          <div className="flex gap-2 w-max">
+            <button
+              onClick={() => setLocationFilter(null)}
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${
+                locationFilter === null
+                  ? 'bg-white/20 text-white border-white/30'
+                  : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'
+              }`}
+            >
+              All places
+            </button>
+            {locationOrder.map((loc) => (
+              <button
+                key={loc}
+                onClick={() => setLocationFilter(loc)}
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border flex items-center gap-1 ${
+                  locationFilter === loc
+                    ? 'bg-white/20 text-white border-white/30'
+                    : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'
+                }`}
+              >
+                <MapPin className="w-3 h-3" />
+                {loc}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Polaroid / scrapbook view */}
       {viewMode === 'polaroid' && (
         <div className="max-w-6xl mx-auto px-8 py-16">
+          {allDatedSlides.length === 0 && (
+            <p className="text-center text-white/40 text-sm py-20">
+              No photos from {locationFilter} yet.
+            </p>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8 sm:gap-12">
             {allDatedSlides.map(({ src, type }, idx) => {
               const dateKey = parseDateKey(src);
@@ -204,6 +257,11 @@ export default function TimelinePage() {
       {/* Grid / timeline view */}
       {viewMode === 'grid' && (
         <div className="max-w-4xl mx-auto px-6 py-10 space-y-14">
+          {sortedDates.length === 0 && (
+            <p className="text-center text-white/40 text-sm py-20">
+              No photos from {locationFilter} yet.
+            </p>
+          )}
           {sortedDates.map((dateKey) => {
             const daySlides = grouped[dateKey];
             const startIdx = globalIdx;
@@ -273,12 +331,12 @@ export default function TimelinePage() {
       {/* Location view */}
       {viewMode === 'location' && (
         <div className="max-w-4xl mx-auto px-6 py-10 space-y-14">
-          {locationOrder.length === 0 && (
+          {filteredLocationOrder.length === 0 && (
             <p className="text-center text-white/40 text-sm py-20">
               No photos have location data yet.
             </p>
           )}
-          {locationOrder.map((location) => {
+          {filteredLocationOrder.map((location) => {
             const placeSlides = groupedByLocation[location];
             const startIdx = globalIdx;
             globalIdx += placeSlides.length;
