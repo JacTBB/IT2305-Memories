@@ -33,6 +33,13 @@ const HERO_ORDER = ['Hero1.jpg', 'Hero2.jpg', 'Hero3.jpg', 'Hero4.jpg'];
 const excludePath = path.join(__dirname, '..', 'excluded-media.json');
 const EXCLUDE = new Set(JSON.parse(fs.readFileSync(excludePath, 'utf-8')));
 
+const locationsPath = path.join(__dirname, '..', 'media-locations.json');
+const LOCATIONS = fs.existsSync(locationsPath) ? JSON.parse(fs.readFileSync(locationsPath, 'utf-8')) : {};
+
+function stemOf(name) {
+  return name.slice(0, name.length - path.extname(name).length);
+}
+
 // Some photos were uploaded as both .jpg and .webp (same shot, two formats) —
 // when that happens for an image, keep only the .webp copy. Video files are
 // left alone since a .jpg + .mov pair with the same stem is an iPhone Live
@@ -82,9 +89,13 @@ stream.on('end', () => {
     ...media,
   ];
 
+  // Everything without a specific GPS-derived location is assumed to be Singapore
+  // (where the class is based) — the only photos with real GPS traces are the
+  // one-week Japan trip; nothing else in the bucket carries location metadata.
   const lines = entries.map(({ name, type }) => {
     const encoded = name.replace(/ /g, '%20');
-    return `  { src: getImageUrl('${encoded}'), type: '${type}' },`;
+    const location = LOCATIONS[stemOf(name)] || 'Singapore';
+    return `  { src: getImageUrl('${encoded}'), type: '${type}', location: '${location.replace(/'/g, "\\'")}' },`;
   });
 
   const output = `import { getImageUrl } from '@/lib/minio';
@@ -92,6 +103,7 @@ stream.on('end', () => {
 export interface Slide {
   src: string;
   type: 'image' | 'video';
+  location?: string;
 }
 
 export const slides: Slide[] = [

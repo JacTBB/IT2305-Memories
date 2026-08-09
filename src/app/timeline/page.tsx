@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, Frame, Grid3x3, Play } from 'lucide-react';
+import { ChevronLeft, Frame, Grid3x3, MapPin, Play } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -48,10 +48,26 @@ for (const slide of datedSlides) {
 const sortedDates = Object.keys(grouped).sort();
 const allDatedSlides = sortedDates.flatMap((d) => grouped[d]);
 
+// Only a subset of photos carry EXIF GPS (mostly the dated .jpg originals —
+// plain .webp uploads and videos don't), so this group is necessarily partial.
+const locatedSlides = slides.filter((s) => s.location);
+
+const groupedByLocation: Record<string, Slide[]> = {};
+const locationOrder: string[] = [];
+for (const slide of locatedSlides) {
+  const loc = slide.location!;
+  if (!groupedByLocation[loc]) {
+    groupedByLocation[loc] = [];
+    locationOrder.push(loc);
+  }
+  groupedByLocation[loc].push(slide);
+}
+const allLocatedSlides = locationOrder.flatMap((l) => groupedByLocation[l]);
+
 export default function TimelinePage() {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [allCounts, setAllCounts] = useState<Record<string, Record<string, number>> | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'polaroid'>('polaroid');
+  const [viewMode, setViewMode] = useState<'grid' | 'polaroid' | 'location'>('polaroid');
   const [hoveredPolaroid, setHoveredPolaroid] = useState<number | null>(null);
 
   useEffect(() => {
@@ -69,6 +85,14 @@ export default function TimelinePage() {
     setLightboxIdx((i) => i === null ? null : (i + 1) % allDatedSlides.length);
   }, []);
 
+  const onLocPrev = useCallback(() => {
+    setLightboxIdx((i) => i === null ? null : (i - 1 + allLocatedSlides.length) % allLocatedSlides.length);
+  }, []);
+
+  const onLocNext = useCallback(() => {
+    setLightboxIdx((i) => i === null ? null : (i + 1) % allLocatedSlides.length);
+  }, []);
+
   let globalIdx = 0;
 
   return (
@@ -80,7 +104,11 @@ export default function TimelinePage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-lg font-semibold tracking-tight">Timeline</h1>
-          <p className="text-xs text-white/40">{datedSlides.length} photos across {sortedDates.length} days</p>
+          <p className="text-xs text-white/40">
+            {viewMode === 'location'
+              ? `${locatedSlides.length} photos across ${locationOrder.length} places`
+              : `${datedSlides.length} photos across ${sortedDates.length} days`}
+          </p>
         </div>
         <div className="flex gap-1 bg-white/5 rounded-lg p-1">
           <button
@@ -96,6 +124,13 @@ export default function TimelinePage() {
             className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white/70'}`}
           >
             <Grid3x3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('location')}
+            title="Location view"
+            className={`p-1.5 rounded-md transition-all ${viewMode === 'location' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white/70'}`}
+          >
+            <MapPin className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -235,13 +270,88 @@ export default function TimelinePage() {
         </div>
       )}
 
+      {/* Location view */}
+      {viewMode === 'location' && (
+        <div className="max-w-4xl mx-auto px-6 py-10 space-y-14">
+          {locationOrder.length === 0 && (
+            <p className="text-center text-white/40 text-sm py-20">
+              No photos have location data yet.
+            </p>
+          )}
+          {locationOrder.map((location) => {
+            const placeSlides = groupedByLocation[location];
+            const startIdx = globalIdx;
+            globalIdx += placeSlides.length;
+
+            return (
+              <section key={location}>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <h2 className="text-sm font-medium text-white/60 whitespace-nowrap flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {location}
+                  </h2>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {placeSlides.map(({ src, type }, i) => {
+                    const idx = startIdx + i;
+                    const photoId = decodeURIComponent(src.split('/').pop() ?? '');
+                    return (
+                      <div key={src} className="flex flex-col gap-1">
+                        <button
+                          onClick={() => setLightboxIdx(idx)}
+                          className="aspect-square overflow-hidden rounded-lg cursor-zoom-in group relative"
+                        >
+                          {type === 'video' ? (
+                            <video
+                              src={src}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <img
+                              src={src}
+                              alt=""
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          )}
+                          {type === 'video' && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                              <Play className="w-6 h-6 text-white/90 fill-white/90" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                        </button>
+                        {allCounts !== null && (
+                          <Reactions
+                            photoId={photoId}
+                            compact
+                            initialCounts={allCounts[photoId] ?? {}}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
+
       {lightboxIdx !== null && (
         <Lightbox
-          slides={allDatedSlides}
+          slides={viewMode === 'location' ? allLocatedSlides : allDatedSlides}
           index={lightboxIdx}
           onClose={() => setLightboxIdx(null)}
-          onPrev={onPrev}
-          onNext={onNext}
+          onPrev={viewMode === 'location' ? onLocPrev : onPrev}
+          onNext={viewMode === 'location' ? onLocNext : onNext}
         />
       )}
     </main>

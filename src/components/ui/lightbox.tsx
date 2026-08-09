@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Download, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, MapPin, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { Reactions } from '@/components/reactions';
@@ -15,7 +15,7 @@ interface LightboxProps {
 }
 
 export function Lightbox({ slides, index, onClose, onPrev, onNext }: LightboxProps) {
-  const { src, type } = slides[index];
+  const { src, type, location } = slides[index];
   const photoId = decodeURIComponent(src.split('/').pop() ?? '');
 
   useEffect(() => {
@@ -71,6 +71,12 @@ export function Lightbox({ slides, index, onClose, onPrev, onNext }: LightboxPro
             alt=""
             className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
           />
+        )}
+        {location && (
+          <div className="flex items-center gap-1.5 text-white/60 text-xs">
+            <MapPin className="w-3.5 h-3.5" />
+            {location}
+          </div>
         )}
         <Reactions photoId={photoId} />
       </div>
