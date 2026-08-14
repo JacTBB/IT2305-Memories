@@ -1,15 +1,52 @@
-import { db, posts, users } from '@/schema';
-import { eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import React from 'react';
 
+import { FeaturedMoments } from '@/components/featured-moments';
 import { Hero } from '@/components/hero';
+import { slides } from '@/lib/slides';
+import { db, posts, reactions, users } from '@/schema';
+
+function parseDateKey(src: string): string | null {
+  const filename = decodeURIComponent(src.split('/').pop() ?? '');
+  const match = filename.match(/^(\d{2})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  return `20${match[1]}-${match[2]}-${match[3]}`;
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <div>
+      <p className="text-2xl font-semibold text-white tabular-nums">{value.toLocaleString()}</p>
+      <p className="text-xs text-neutral-500 uppercase tracking-wide mt-1">{label}</p>
+    </div>
+  );
+}
+
+const StatsStrip = async () => {
+  const photoCount = slides.length;
+  const dayCount = new Set(slides.map((s) => parseDateKey(s.src)).filter(Boolean)).size;
+  const locationCount = new Set(slides.filter((s) => s.location).map((s) => s.location)).size;
+  const [{ total: reactionTotal }] = await db.select({ total: count() }).from(reactions);
+
+  return (
+    <section className="border-y border-white/10 bg-white/[0.02]">
+      <div className="max-w-4xl mx-auto px-6 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+        <Stat value={photoCount} label="Memories" />
+        <Stat value={dayCount} label="Days" />
+        <Stat value={locationCount} label="Places" />
+        <Stat value={Number(reactionTotal)} label="Reactions" />
+      </div>
+    </section>
+  );
+};
 
 const Posts = async () => {
   const PostsData = await db
     .select()
     .from(posts)
     .leftJoin(users, eq(posts.authorId, users.id))
+    .orderBy(desc(posts.star), desc(posts.createdTimestamp))
     .then((results) =>
       results.map((row) => ({ ...row.post, author: row.user }))
     );
@@ -46,6 +83,10 @@ export default async function Home() {
   return (
     <main className="bg-black min-h-screen">
       <Hero />
+
+      <StatsStrip />
+
+      <FeaturedMoments />
 
       <section className="py-16">
         <h2 className="text-center text-2xl font-semibold tracking-tight text-white mb-2">
