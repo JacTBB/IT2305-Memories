@@ -112,14 +112,14 @@ export const Hero = ({
   }, []);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !parentRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = parentRef.current.offsetWidth;
+    canvas.height = parentRef.current.offsetHeight;
 
     const particles: Particle[] = [];
     const particleCount = 100;
@@ -177,21 +177,26 @@ export const Hero = ({
     animate();
 
     const handleResize = () => {
-      if (!canvasRef.current) return;
-      canvasRef.current.width = window.innerWidth;
-      canvasRef.current.height = window.innerHeight;
+      if (!canvasRef.current || !parentRef.current) return;
+      canvasRef.current.width = parentRef.current.offsetWidth;
+      canvasRef.current.height = parentRef.current.offsetHeight;
     };
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(parentRef.current);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
+    };
   }, []);
 
   return (
     <div
       ref={parentRef}
       className={cn(
-        'h-[100vh] bg-gradient-to-b from-white to-neutral-100 dark:from-neutral-950 dark:to-blue-950 relative flex items-center w-full justify-center overflow-hidden',
-        // h-screen if you want bigger
+        'min-h-screen bg-gradient-to-b from-white to-neutral-100 dark:from-neutral-950 dark:to-blue-950 relative flex items-center w-full justify-center overflow-hidden',
         className,
       )}
     >
@@ -206,7 +211,7 @@ export const Hero = ({
         />
       ))}
 
-      <div className="relative flex h-full flex-col items-center justify-center px-4 text-center">
+      <div className="relative flex flex-col items-center justify-center px-4 py-24 text-center">
         <motion.h1
           className="mb-6 text-6xl font-bold tracking-tighter sm:text-7xl lg:text-8xl"
           initial={{ opacity: 0, y: -20 }}
