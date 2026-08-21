@@ -39,6 +39,8 @@ Uploading to the bucket alone doesn't make new media show up on the site — `sr
 node scripts/generate-slides.mjs
 ```
 
+This lists the bucket, classifies each file as `image` or `video` by extension, and rewrites `slides.ts`. Known non-memory assets (`next.svg`, `vercel.svg`, `SIT.png`) are excluded automatically — edit the `EXCLUDE` set in the script to exclude others.
+
 ## Future Memories (Telegram delivery)
 
 Logged-in users can schedule a class photo to be sent to their own Telegram at a future date/time, from `/dashboard/memories` or the "Send to Future Me" button in the photo lightbox.
@@ -51,17 +53,13 @@ Logged-in users can schedule a class photo to be sent to their own Telegram at a
    TELEGRAM_BOT_TOKEN=your-bot-token
    NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=your_bot_username
    ```
-3. Apply the `scheduled_memory` table migration:
+3. Apply the `scheduled_memory`/`memory_subscription` table migrations:
    ```bash
    npm run migrate
    ```
-4. Run the bot + delivery worker as a second process alongside `npm run dev`:
-   ```bash
-   npm run telegram
-   ```
 
-**How it works:** scheduling a memory generates a `t.me/<bot>?start=snap_{id}_{token}` deep-link. Opening it and hitting Start links the user's Telegram chat to that memory. `npm run telegram` polls the database every 60s and sends any memory whose delivery time has passed via the Bot API — no Telegram scheduling needed since photos are already public on the CDN (no image encryption/decryption required, unlike a private photo-upload app).
+That's it — the bot and its delivery worker (`src/telegram-bot.js`) start automatically inside `server.js` alongside the web server, both in `npm run dev` and in production. There's no separate process to run.
 
-In production, run `npm run telegram` as its own long-lived process (e.g. a second systemd service, pm2 process, or container) alongside the web server — it must stay running continuously since it uses long-polling rather than a webhook.
+**How it works:** scheduling a memory generates a `t.me/<bot>?start=snap_{id}_{token}` deep-link (or `sub_{id}_{token}` for a recurring subscription). Opening it and hitting Start links the user's Telegram chat to that row. Every 60s, `server.js` checks for memories whose delivery time has passed and subscriptions whose frequency/day/time-of-day matches right now, and sends the photo via the Bot API — no Telegram-side scheduling needed since photos are already public on the CDN (no image encryption/decryption required, unlike a private photo-upload app).
 
-This lists the bucket, classifies each file as `image` or `video` by extension, and rewrites `slides.ts`. Known non-memory assets (`next.svg`, `vercel.svg`, `SIT.png`) are excluded automatically — edit the `EXCLUDE` set in the script to exclude others.
+Since this now runs inside the same process as the web server, a bug in bot/worker code can in principle affect the whole site (and vice versa) — `startTelegramService()` guards against a missing `TELEGRAM_BOT_TOKEN` and against transient DB errors crashing the process, but this is a deliberate simplicity-over-isolation tradeoff, not a hard requirement. Splitting it back into a standalone process is straightforward if that tradeoff ever stops being worth it — call `startTelegramService()` from its own script instead of from `server.js`.

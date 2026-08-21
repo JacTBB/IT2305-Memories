@@ -11,8 +11,7 @@
     "prepare": "husky",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
-    "studio": "drizzle-kit studio",
-    "telegram": "node scripts/telegram-service.mjs"
+    "studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.4.1",
