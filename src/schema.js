@@ -125,3 +125,44 @@ export const scrapbooks = pgTable('scrapbook', {
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().notNull(),
 });
+
+export const scheduledMemories = pgTable('scheduled_memory', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  photoSrc: text('photoSrc').notNull(),
+  caption: text('caption'),
+  sendAt: timestamp('sendAt').notNull(),
+  telegramChatId: text('telegramChatId'),
+  telegramLinkToken: text('telegramLinkToken')
+    .notNull()
+    .unique()
+    .$defaultFn(() => crypto.randomUUID()),
+  deliveryStatus: text('deliveryStatus', { enum: ['pending', 'linked', 'sent', 'failed'] })
+    .notNull()
+    .default('pending'),
+  errorMessage: text('errorMessage'),
+  retryCount: integer('retryCount').notNull().default(0),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  deliveredAt: timestamp('deliveredAt'),
+});
+
+export const memorySubscriptions = pgTable('memory_subscription', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  frequency: text('frequency', { enum: ['daily', 'weekly', 'monthly'] }).notNull(),
+  // 'HH:MM' in Singapore local time (UTC+8)
+  timeOfDay: text('timeOfDay').notNull(),
+  // 0 (Sun) - 6 (Sat); weekly only
+  dayOfWeek: integer('dayOfWeek'),
+  // 1-28; monthly only
+  dayOfMonth: integer('dayOfMonth'),
+  telegramChatId: text('telegramChatId'),
+  telegramLinkToken: text('telegramLinkToken')
+    .notNull()
+    .unique()
+    .$defaultFn(() => crypto.randomUUID()),
+  active: boolean('active').notNull().default(true),
+  lastSentAt: timestamp('lastSentAt'),
+  lastSentPhotoSrc: text('lastSentPhotoSrc'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});

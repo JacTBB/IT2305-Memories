@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { BookImage, PencilLine } from 'lucide-react';
+import { BookImage, PencilLine, Send } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
@@ -95,6 +95,12 @@ export default async function Dashboard() {
             <Link href="/scrapbook">
               <BookImage className="w-4 h-4" />
               Scrapbook
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="gap-2">
+            <Link href="/dashboard/memories">
+              <Send className="w-4 h-4" />
+              Future Memories
             </Link>
           </Button>
         </div>

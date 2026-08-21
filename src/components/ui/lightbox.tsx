@@ -1,6 +1,7 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Download, MapPin, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, MapPin, Send, X } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect } from 'react';
 
 import { Reactions } from '@/components/reactions';
@@ -99,6 +100,17 @@ export function Lightbox({ slides, index, onClose, onPrev, onNext }: LightboxPro
       >
         <Download className="w-5 h-5" />
       </button>
+
+      {type === 'image' && (
+        <Link
+          href={`/dashboard/memories?photo=${encodeURIComponent(src)}`}
+          onClick={(e) => e.stopPropagation()}
+          title="Send to Future Me"
+          className="absolute top-4 right-28 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-all"
+        >
+          <Send className="w-5 h-5" />
+        </Link>
+      )}
 
       <button
         onClick={(e) => { e.stopPropagation(); onPrev(); }}
