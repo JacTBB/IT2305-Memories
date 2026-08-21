@@ -193,6 +193,18 @@ bot.catch((err) => {
   console.error('[telegram-bot] Unhandled error:', err);
 });
 
+// This is a long-lived background process with no supervisor guaranteed to
+// restart it (unlike the web server, nothing watches for missed deliveries).
+// A transient DB hiccup (e.g. ECONNRESET) can otherwise surface as an
+// uncaught exception deep in the `postgres` driver and kill the whole
+// process — log and keep running instead of silently going dark.
+process.on('uncaughtException', (err) => {
+  console.error('[telegram-worker] Uncaught exception (process kept alive):', err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('[telegram-worker] Unhandled rejection (process kept alive):', err);
+});
+
 // =============================================================================
 // Delivery worker — polls for due, linked memories and sends them
 // =============================================================================
