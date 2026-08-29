@@ -2,10 +2,9 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ChevronDown, Filter, MapPin } from 'lucide-react';
-
+import { HeroFilters, type HeroFilterResult } from '@/components/hero-filters';
 import { MusicPlayer } from '@/components/music-player';
 import { Carousel } from '@/components/ui/carousel';
 import { Lightbox } from '@/components/ui/lightbox';
@@ -84,24 +83,20 @@ export const Hero = ({
   const parentRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [surpriseIdx, setSurpriseIdx] = useState<number | null>(null);
-  const [locationFilter, setLocationFilter] = useState<string | null>(null);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
+  const [filterResult, setFilterResult] = useState<HeroFilterResult>({
+    locationFilter: null,
+    personName: null,
+    photoSrcs: null,
+  });
+  const { locationFilter, personName: selectedPersonName, photoSrcs: personPhotoSrcs } = filterResult;
 
-  const filteredCarouselSlides = locationFilter
-    ? carouselSlides.filter((s) => s.location === locationFilter)
-    : carouselSlides;
-
-  useEffect(() => {
-    if (!filterOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [filterOpen]);
+  const filteredCarouselSlides = useMemo(
+    () =>
+      carouselSlides
+        .filter((s) => !locationFilter || s.location === locationFilter)
+        .filter((s) => !personPhotoSrcs || personPhotoSrcs.has(s.src)),
+    [locationFilter, personPhotoSrcs],
+  );
 
   const surprisePrev = useCallback(() => {
     setSurpriseIdx((i) => i === null ? null : (i - 1 + slides.length) % slides.length);
@@ -228,61 +223,13 @@ export const Hero = ({
         >
           The Skibidi Class
         </motion.p>
-        {carouselLocations.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.15 }}
-            className="relative z-40 mb-4"
-            ref={filterRef}
-          >
-            <button
-              onClick={() => setFilterOpen((o) => !o)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-medium backdrop-blur-sm border border-white/20 transition-all"
-            >
-              <Filter className="w-3.5 h-3.5" />
-              {locationFilter ?? 'Filter by place'}
-              <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', filterOpen && 'rotate-180')} />
-            </button>
-
-            {filterOpen && (
-              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-30 w-56 max-h-64 overflow-y-auto rounded-xl bg-black/90 backdrop-blur-md border border-white/20 shadow-xl py-1">
-                <button
-                  onClick={() => {
-                    setLocationFilter(null);
-                    setFilterOpen(false);
-                  }}
-                  className={cn(
-                    'w-full text-left px-4 py-2 text-sm transition-colors',
-                    locationFilter === null
-                      ? 'text-white bg-white/10'
-                      : 'text-white/60 hover:bg-white/5 hover:text-white',
-                  )}
-                >
-                  All places
-                </button>
-                {carouselLocations.map((loc) => (
-                  <button
-                    key={loc}
-                    onClick={() => {
-                      setLocationFilter(loc);
-                      setFilterOpen(false);
-                    }}
-                    className={cn(
-                      'w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-1.5',
-                      locationFilter === loc
-                        ? 'text-white bg-white/10'
-                        : 'text-white/60 hover:bg-white/5 hover:text-white',
-                    )}
-                  >
-                    <MapPin className="w-3 h-3 shrink-0" />
-                    {loc}
-                  </button>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.15 }}
+        >
+          <HeroFilters carouselLocations={carouselLocations} onChange={setFilterResult} />
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -290,10 +237,10 @@ export const Hero = ({
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           {filteredCarouselSlides.length > 0 ? (
-            <Carousel key={locationFilter ?? 'all'} slides={filteredCarouselSlides} />
+            <Carousel key={`${locationFilter ?? 'all'}-${selectedPersonName ?? 'all'}`} slides={filteredCarouselSlides} />
           ) : (
             <div className="w-[76vmin] h-[64vmin] rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 text-white/40 text-sm">
-              No photos from {locationFilter} yet.
+              No photos {[locationFilter && `from ${locationFilter}`, selectedPersonName && `of ${selectedPersonName}`].filter(Boolean).join(' ') || 'yet'}.
             </div>
           )}
         </motion.div>

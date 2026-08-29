@@ -14,6 +14,15 @@ export function Carousel({ slides }: { slides: Slide[] }) {
   const [animKey, setAnimKey] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  // `order` holds indices into `slides`; if the `slides` prop is swapped out
+  // for a differently-sized array (e.g. a filter changes) without this
+  // component remounting, stale indices would point past the new array's
+  // end and crash on render. Resync whenever the slides identity changes.
+  useEffect(() => {
+    setOrder(slides.map((_, i) => i));
+    setCurrent(0);
+  }, [slides]);
+
   const goTo = useCallback((idx: number) => {
     setCurrent(idx);
     setAnimKey((k) => k + 1);
@@ -38,11 +47,18 @@ export function Carousel({ slides }: { slides: Slide[] }) {
     goTo(0);
   };
 
-  const orderedSlides = order.map((i) => slides[i]);
-  const prevI = (current - 1 + order.length) % order.length;
-  const nextI = (current + 1) % order.length;
-  const visible = new Set([prevI, current, nextI]);
-  const currentPhotoId = decodeURIComponent(orderedSlides[current].src.split('/').pop() ?? '');
+  // `order`/`current` are corrected for a new `slides` array by the effect
+  // above, but that only takes effect *after* this render — fall back to a
+  // safe identity order for this render if they're still out of sync, so a
+  // shrinking `slides` prop can never index past the end of the new array.
+  const safeOrder = order.length === slides.length ? order : slides.map((_, i) => i);
+  const safeCurrent = current < safeOrder.length ? current : 0;
+
+  const orderedSlides = safeOrder.map((i) => slides[i]);
+  const prevI = (safeCurrent - 1 + safeOrder.length) % safeOrder.length;
+  const nextI = (safeCurrent + 1) % safeOrder.length;
+  const visible = new Set([prevI, safeCurrent, nextI]);
+  const currentPhotoId = decodeURIComponent(orderedSlides[safeCurrent].src.split('/').pop() ?? '');
 
   return (
     <>
@@ -53,9 +69,9 @@ export function Carousel({ slides }: { slides: Slide[] }) {
         <div
           className="relative w-[76vmin] h-[64vmin] rounded-2xl overflow-hidden shadow-2xl"
         >
-        {order.map((slideIdx, i) => {
+        {safeOrder.map((slideIdx, i) => {
           if (!visible.has(i)) return null;
-          const isActive = i === current;
+          const isActive = i === safeCurrent;
           return (
             <div
               key={i}
@@ -95,14 +111,14 @@ export function Carousel({ slides }: { slides: Slide[] }) {
           <div
             className="h-full bg-white/50"
             style={{
-              width: `${((current + 1) / order.length) * 100}%`,
+              width: `${((safeCurrent + 1) / safeOrder.length) * 100}%`,
               transition: 'width 0.4s ease',
             }}
           />
         </div>
 
         <div className="absolute top-3 right-4 z-20 text-white/50 text-xs font-mono tracking-wide select-none">
-          {current + 1} / {order.length}
+          {safeCurrent + 1} / {safeOrder.length}
         </div>
 
         <button
