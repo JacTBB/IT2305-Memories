@@ -1,7 +1,7 @@
 'use client';
 
-import { Check, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { Check, Star, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,6 +21,8 @@ interface Person {
   id: number;
   name: string | null;
   photoCount: number;
+  needsReview: boolean;
+  coverFaceId: number | null;
   thumbnail: { photoSrc: string; box: Box } | null;
 }
 
@@ -57,6 +59,30 @@ export function FacesIndexer() {
   useEffect(() => {
     refreshPeople();
   }, [refreshPeople]);
+
+  // Singleton clusters (1 photo) can't be a wrong merge — nothing to
+  // disambiguate against — so they don't need review; always last. Among
+  // the rest, anyone with at least one not-yet-confirmed photo goes first;
+  // people who are already fully reviewed sink below them. Purely a
+  // display order — never touches stored data.
+  const sortedPeople = useMemo(() => {
+    const rank = (p: Person) => {
+      if (p.photoCount <= 1) return 2;
+      return p.needsReview ? 0 : 1;
+    };
+    return [...people].sort((a, b) => {
+      const diff = rank(a) - rank(b);
+      if (diff !== 0) return diff;
+      return b.photoCount - a.photoCount;
+    });
+  }, [people]);
+
+  // Inside the review dialog: not-yet-reviewed photos first, confirmed ones
+  // sink to the bottom as you work through them (live, within the session).
+  const sortedReviewFaces = useMemo(
+    () => [...reviewFaces].sort((a, b) => Number(a.verified) - Number(b.verified)),
+    [reviewFaces],
+  );
 
   const runIndexing = async () => {
     setIndexing(true);
@@ -164,6 +190,7 @@ export function FacesIndexer() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'confirm' }),
     });
+    await refreshPeople();
   };
 
   const rejectFace = async (faceId: number) => {
@@ -172,6 +199,15 @@ export function FacesIndexer() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'reject' }),
+    });
+    await refreshPeople();
+  };
+
+  const setCover = async (personId: number, faceId: number) => {
+    await fetch(`/api/faces/people/${personId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coverFaceId: faceId }),
     });
     await refreshPeople();
   };
@@ -203,7 +239,7 @@ export function FacesIndexer() {
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-        {people.map((p) => (
+        {sortedPeople.map((p) => (
           <div key={p.id} className="flex flex-col items-center gap-2 border rounded-lg p-4">
             {p.thumbnail && <FaceChip photoSrc={p.thumbnail.photoSrc} box={p.thumbnail.box} size={80} />}
             <p className="text-xs text-muted-foreground">{p.photoCount} photos</p>
@@ -260,35 +296,47 @@ export function FacesIndexer() {
             <p className="text-sm text-muted-foreground">No photos left to review.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {reviewFaces.map((f) => (
-                <div key={f.id} className="flex flex-col items-center gap-2 border rounded-lg p-3">
-                  <FaceChip photoSrc={f.photoSrc} box={f.box} size={72} />
-                  <img
-                    src={f.photoSrc}
-                    alt=""
-                    className="w-full h-20 object-cover rounded"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={f.verified ? 'default' : 'outline'}
-                      onClick={() => confirmFace(f.id)}
-                      title="Confirm this is the right person"
-                    >
-                      <Check className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => rejectFace(f.id)}
-                      title="Not this person — remove"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+              {sortedReviewFaces.map((f) => {
+                const isCover = people.find((p) => p.id === reviewingPersonId)?.coverFaceId === f.id;
+                return (
+                  <div key={f.id} className="flex flex-col items-center gap-2 border rounded-lg p-3">
+                    <FaceChip photoSrc={f.photoSrc} box={f.box} size={72} />
+                    <img
+                      src={f.photoSrc}
+                      alt=""
+                      className="w-full h-20 object-cover rounded"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={f.verified ? 'default' : 'outline'}
+                        onClick={() => confirmFace(f.id)}
+                        title="Confirm this is the right person"
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => rejectFace(f.id)}
+                        title="Not this person — remove"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={isCover ? 'default' : 'outline'}
+                        onClick={() => reviewingPersonId !== null && setCover(reviewingPersonId, f.id)}
+                        title="Use this photo as the cover"
+                      >
+                        <Star className={`w-4 h-4 ${isCover ? 'fill-current' : ''}`} />
+                      </Button>
+                    </div>
+                    {f.verified && <span className="text-xs text-green-600">Confirmed</span>}
+                    {isCover && <span className="text-xs text-yellow-500">Cover photo</span>}
                   </div>
-                  {f.verified && <span className="text-xs text-green-600">Confirmed</span>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </DialogContent>

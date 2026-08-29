@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/auth';
@@ -22,7 +22,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json({ photoSrcs: rows.map((r) => r.photoSrc) });
 }
 
-// PATCH: admin — rename. Body: { name: string }
+// PATCH: admin — rename and/or set the cover photo.
+// Body: { name?: string, coverFaceId?: number }
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   if (session?.user?.role !== 'admin') {
@@ -32,12 +33,36 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const id = parseId(params.id);
   if (id === null) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
-  const { name } = await req.json();
-  if (typeof name !== 'string' || name.trim().length === 0) {
-    return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
+  const body = await req.json();
+  const updates: { name?: string; coverFaceId?: number } = {};
+
+  if (body.name !== undefined) {
+    if (typeof body.name !== 'string' || body.name.trim().length === 0) {
+      return NextResponse.json({ error: 'Invalid name' }, { status: 400 });
+    }
+    updates.name = body.name.trim();
   }
 
-  await db.update(people).set({ name: name.trim() }).where(eq(people.id, id));
+  if (body.coverFaceId !== undefined) {
+    if (typeof body.coverFaceId !== 'number') {
+      return NextResponse.json({ error: 'Invalid coverFaceId' }, { status: 400 });
+    }
+    const [face] = await db
+      .select({ id: faces.id })
+      .from(faces)
+      .where(and(eq(faces.id, body.coverFaceId), eq(faces.personId, id)))
+      .limit(1);
+    if (!face) {
+      return NextResponse.json({ error: 'That photo does not belong to this person' }, { status: 400 });
+    }
+    updates.coverFaceId = body.coverFaceId;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+  }
+
+  await db.update(people).set(updates).where(eq(people.id, id));
   return NextResponse.json({ ok: true });
 }
 

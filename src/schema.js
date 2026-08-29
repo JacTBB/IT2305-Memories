@@ -149,6 +149,7 @@ export const scheduledMemories = pgTable('scheduled_memory', {
 export const people = pgTable('person', {
   id: serial('id').primaryKey(),
   name: text('name'),
+  coverFaceId: integer('coverFaceId').references(() => faces.id, { onDelete: 'set null' }),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
 });
 

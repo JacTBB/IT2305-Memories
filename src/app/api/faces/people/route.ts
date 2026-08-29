@@ -18,7 +18,13 @@ export async function GET(req: NextRequest) {
 
   const allPeople = await db.select().from(people);
   const allFaces = await db
-    .select({ id: faces.id, photoSrc: faces.photoSrc, personId: faces.personId, box: faces.box })
+    .select({
+      id: faces.id,
+      photoSrc: faces.photoSrc,
+      personId: faces.personId,
+      box: faces.box,
+      verified: faces.verified,
+    })
     .from(faces)
     .where(isNotNull(faces.personId));
 
@@ -40,11 +46,14 @@ export async function GET(req: NextRequest) {
     .map((p) => {
       const personFaces = facesByPerson.get(p.id) ?? [];
       const uniquePhotos = new Set(personFaces.map((f) => f.photoSrc));
+      const cover = personFaces.find((f) => f.id === p.coverFaceId) ?? personFaces[0];
       return {
         id: p.id,
         name: p.name,
         photoCount: uniquePhotos.size,
-        thumbnail: personFaces[0] ? { photoSrc: personFaces[0].photoSrc, box: personFaces[0].box } : null,
+        needsReview: personFaces.some((f) => !f.verified),
+        coverFaceId: cover?.id ?? null,
+        thumbnail: cover ? { photoSrc: cover.photoSrc, box: cover.box } : null,
       };
     })
     .filter((p) => p.thumbnail !== null);
