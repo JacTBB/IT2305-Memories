@@ -1,18 +1,34 @@
 'use client';
 
+import { Check, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { FaceChip } from '@/components/face-chip';
 import { detectFaces, loadFaceModels, loadImage } from '@/lib/faces/faceapi';
 import { slides } from '@/lib/slides';
 
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface Person {
   id: number;
   name: string | null;
   photoCount: number;
-  thumbnail: { photoSrc: string; box: { x: number; y: number; width: number; height: number } } | null;
+  thumbnail: { photoSrc: string; box: Box } | null;
+}
+
+interface ReviewFace {
+  id: number;
+  photoSrc: string;
+  box: Box;
+  verified: boolean;
 }
 
 const imageSlides = slides.filter((s) => s.type === 'image');
@@ -26,6 +42,9 @@ export function FacesIndexer() {
   const [unassignedFaces, setUnassignedFaces] = useState(0);
   const [names, setNames] = useState<Record<number, string>>({});
   const [mergeTarget, setMergeTarget] = useState<Record<number, string>>({});
+  const [reviewingPersonId, setReviewingPersonId] = useState<number | null>(null);
+  const [reviewFaces, setReviewFaces] = useState<ReviewFace[]>([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   const refreshPeople = useCallback(async () => {
     const res = await fetch('/api/faces/people?all=1');
@@ -126,6 +145,37 @@ export function FacesIndexer() {
     await refreshPeople();
   };
 
+  const openReview = async (id: number) => {
+    setReviewingPersonId(id);
+    setReviewLoading(true);
+    try {
+      const res = await fetch(`/api/faces/people/${id}/faces`);
+      const data = await res.json();
+      setReviewFaces(data.faces ?? []);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const confirmFace = async (faceId: number) => {
+    setReviewFaces((fs) => fs.map((f) => (f.id === faceId ? { ...f, verified: true } : f)));
+    await fetch(`/api/faces/${faceId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'confirm' }),
+    });
+  };
+
+  const rejectFace = async (faceId: number) => {
+    setReviewFaces((fs) => fs.filter((f) => f.id !== faceId));
+    await fetch(`/api/faces/${faceId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reject' }),
+    });
+    await refreshPeople();
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-8">
       <h1 className="text-2xl font-semibold">People / Face Indexing</h1>
@@ -167,6 +217,10 @@ export function FacesIndexer() {
               Save name
             </Button>
 
+            <Button size="sm" variant="outline" onClick={() => openReview(p.id)}>
+              Review photos
+            </Button>
+
             <select
               className="text-xs border rounded px-1 py-1 bg-background w-full"
               value={mergeTarget[p.id] ?? ''}
@@ -191,6 +245,54 @@ export function FacesIndexer() {
           </div>
         ))}
       </div>
+
+      <Dialog open={reviewingPersonId !== null} onOpenChange={(open) => !open && setReviewingPersonId(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {people.find((p) => p.id === reviewingPersonId)?.name || `Person #${reviewingPersonId}`} — review matches
+            </DialogTitle>
+          </DialogHeader>
+
+          {reviewLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : reviewFaces.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No photos left to review.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {reviewFaces.map((f) => (
+                <div key={f.id} className="flex flex-col items-center gap-2 border rounded-lg p-3">
+                  <FaceChip photoSrc={f.photoSrc} box={f.box} size={72} />
+                  <img
+                    src={f.photoSrc}
+                    alt=""
+                    className="w-full h-20 object-cover rounded"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={f.verified ? 'default' : 'outline'}
+                      onClick={() => confirmFace(f.id)}
+                      title="Confirm this is the right person"
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => rejectFace(f.id)}
+                      title="Not this person — remove"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {f.verified && <span className="text-xs text-green-600">Confirmed</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

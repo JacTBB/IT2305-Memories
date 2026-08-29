@@ -158,6 +158,16 @@ export const faces = pgTable('face', {
   personId: integer('personId').references(() => people.id, { onDelete: 'set null' }),
   descriptor: json('descriptor').notNull(),
   box: json('box').notNull(),
+  verified: boolean('verified').notNull().default(false),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+// Records a face that an admin confirmed does NOT belong to a person, so
+// re-clustering never reassigns that exact face back to that same person.
+export const faceRejections = pgTable('face_rejection', {
+  id: serial('id').primaryKey(),
+  faceId: integer('faceId').notNull().references(() => faces.id, { onDelete: 'cascade' }),
+  personId: integer('personId').notNull().references(() => people.id, { onDelete: 'cascade' }),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
 });
 

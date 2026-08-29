@@ -1,4 +1,14 @@
-export const SAME_PERSON_THRESHOLD = 0.6;
+// face-api.js's docs cite 0.6 as the "same person" cutoff, but that's
+// calibrated on well-lit, front-facing benchmark photos. Measured against
+// this library's actual data (candid group shots, webp compression, a
+// less-precise TinyFaceDetector crop/alignment), nearly every cluster
+// — right and wrong alike — had its farthest pairwise distance sitting
+// right at ~0.58-0.60, which means 0.6 wasn't discriminating anything; it
+// was just the ceiling complete-linkage clustering walks up to. Tightened
+// to 0.45, which is well above where confirmed-good clusters sat (~0.26-0.48)
+// and should reject most of the false merges. Re-run "Reset clustering" +
+// "Cluster faces" after changing this to rebuild existing groups with it.
+export const SAME_PERSON_THRESHOLD = 0.45;
 
 export function euclideanDistance(a: number[], b: number[]): number {
   let sum = 0;
@@ -35,9 +45,13 @@ interface PersonGroup {
   descriptors: number[][];
 }
 
+// `rejectedPairs` holds `${faceId}:${personId}` strings for admin-rejected
+// matches — clustering must never re-propose one of those exact pairs, even
+// if the descriptors would otherwise be close enough.
 export function assignFaces(
   unclustered: FaceRow[],
   existingPeople: PersonGroup[],
+  rejectedPairs: Set<string> = new Set(),
 ): { existingAssignments: { faceId: number; personId: number }[]; newGroups: FaceRow[][] } {
   const groups = existingPeople.map((p) => ({
     personId: p.personId,
@@ -50,6 +64,7 @@ export function assignFaces(
   for (const face of unclustered) {
     let best: { group: (typeof groups)[number]; dist: number } | null = null;
     for (const group of groups) {
+      if (rejectedPairs.has(`${face.id}:${group.personId}`)) continue;
       const dist = maxDistanceToGroup(face.descriptor, group.descriptors);
       if (dist < SAME_PERSON_THRESHOLD && (!best || dist < best.dist)) {
         best = { group, dist };
