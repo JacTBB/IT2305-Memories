@@ -55,6 +55,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
             >
               Users
             </Link>
+            <Link
+              href="/admin/faces"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Faces
+            </Link>
           </nav>
           <Sheet>
             <SheetTrigger asChild>

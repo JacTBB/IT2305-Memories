@@ -146,6 +146,21 @@ export const scheduledMemories = pgTable('scheduled_memory', {
   deliveredAt: timestamp('deliveredAt'),
 });
 
+export const people = pgTable('person', {
+  id: serial('id').primaryKey(),
+  name: text('name'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export const faces = pgTable('face', {
+  id: serial('id').primaryKey(),
+  photoSrc: text('photoSrc').notNull(),
+  personId: integer('personId').references(() => people.id, { onDelete: 'set null' }),
+  descriptor: json('descriptor').notNull(),
+  box: json('box').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
 export const memorySubscriptions = pgTable('memory_subscription', {
   id: serial('id').primaryKey(),
   userId: text('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),

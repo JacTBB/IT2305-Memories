@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { BookImage, PencilLine, Send } from 'lucide-react';
+import { BookImage, PencilLine, ScanFace, Send } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
@@ -103,6 +103,14 @@ export default async function Dashboard() {
               Future Memories
             </Link>
           </Button>
+          {session.user.role === 'admin' && (
+            <Button asChild variant="outline" className="gap-2">
+              <Link href="/admin/faces">
+                <ScanFace className="w-4 h-4" />
+                Faces
+              </Link>
+            </Button>
+          )}
         </div>
       </section>
       <section className="mt-10">

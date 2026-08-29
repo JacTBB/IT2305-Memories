@@ -4,9 +4,17 @@ import { ChevronLeft, Frame, Grid3x3, MapPin, Play } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { FaceChip } from '@/components/face-chip';
 import { Reactions } from '@/components/reactions';
 import { Lightbox } from '@/components/ui/lightbox';
 import { slides, type Slide } from '@/lib/slides';
+
+interface PersonSummary {
+  id: number;
+  name: string | null;
+  photoCount: number;
+  thumbnail: { photoSrc: string; box: { x: number; y: number; width: number; height: number } } | null;
+}
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -23,6 +31,18 @@ function parseDateKey(src: string): string | null {
 function formatDateKey(key: string): string {
   const [year, month, day] = key.split('-');
   return `${parseInt(day)} ${MONTHS[parseInt(month) - 1]} ${year}`;
+}
+
+function filterSummaryLabel(locationFilter: string | null, personName?: string): string {
+  return [locationFilter, personName].filter(Boolean).join(', ');
+}
+
+function emptyStateMessage(locationFilter: string | null, personName?: string): string {
+  const parts = [
+    locationFilter && `from ${locationFilter}`,
+    personName && `of ${personName}`,
+  ].filter(Boolean);
+  return parts.length ? `No photos ${parts.join(' ')}.` : 'No photos yet.';
 }
 
 function polaroidTransform(src: string): string {
@@ -60,6 +80,9 @@ export default function TimelinePage() {
   const [viewMode, setViewMode] = useState<'grid' | 'polaroid' | 'location'>('polaroid');
   const [hoveredPolaroid, setHoveredPolaroid] = useState<number | null>(null);
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
+  const [people, setPeople] = useState<PersonSummary[]>([]);
+  const [personFilter, setPersonFilter] = useState<number | null>(null);
+  const [personPhotoSrcs, setPersonPhotoSrcs] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     fetch('/api/reactions/all')
@@ -68,12 +91,30 @@ export default function TimelinePage() {
       .catch(() => setAllCounts({}));
   }, []);
 
-  // Dated slides, narrowed to the selected location (if any). Feeds the
-  // polaroid and grid views.
+  useEffect(() => {
+    fetch('/api/faces/people')
+      .then((r) => r.json())
+      .then((data) => setPeople(Array.isArray(data) ? data : []))
+      .catch(() => setPeople([]));
+  }, []);
+
+  useEffect(() => {
+    if (personFilter === null) {
+      setPersonPhotoSrcs(null);
+      return;
+    }
+    fetch(`/api/faces/people/${personFilter}`)
+      .then((r) => r.json())
+      .then((data) => setPersonPhotoSrcs(new Set<string>(data.photoSrcs ?? [])))
+      .catch(() => setPersonPhotoSrcs(new Set()));
+  }, [personFilter]);
+
+  // Dated slides, narrowed to the selected location and/or person (if any).
+  // Feeds the polaroid and grid views.
   const { grouped, sortedDates, allDatedSlides } = useMemo(() => {
-    const filtered = locationFilter
-      ? datedSlides.filter((s) => s.location === locationFilter)
-      : datedSlides;
+    const filtered = datedSlides
+      .filter((s) => !locationFilter || s.location === locationFilter)
+      .filter((s) => !personPhotoSrcs || personPhotoSrcs.has(s.src));
 
     const grouped: Record<string, Slide[]> = {};
     for (const slide of filtered) {
@@ -85,11 +126,13 @@ export default function TimelinePage() {
     const allDatedSlides = sortedDates.flatMap((d) => grouped[d]);
 
     return { grouped, sortedDates, allDatedSlides };
-  }, [locationFilter]);
+  }, [locationFilter, personPhotoSrcs]);
 
   // Locations to render in the location view, narrowed to the selection.
   const filteredLocationOrder = locationFilter ? [locationFilter] : locationOrder;
-  const allLocatedSlides = filteredLocationOrder.flatMap((l) => groupedByLocation[l]);
+  const allLocatedSlides = filteredLocationOrder
+    .flatMap((l) => groupedByLocation[l])
+    .filter((s) => !personPhotoSrcs || personPhotoSrcs.has(s.src));
 
   const onPrev = useCallback(() => {
     setLightboxIdx((i) => i === null ? null : (i - 1 + allDatedSlides.length) % allDatedSlides.length);
@@ -107,6 +150,10 @@ export default function TimelinePage() {
     setLightboxIdx((i) => i === null ? null : (i + 1) % allLocatedSlides.length);
   }, [allLocatedSlides.length]);
 
+  const selectedPersonName = personFilter !== null
+    ? (people.find((p) => p.id === personFilter)?.name ?? undefined)
+    : undefined;
+
   let globalIdx = 0;
 
   return (
@@ -119,8 +166,8 @@ export default function TimelinePage() {
         <div className="flex-1">
           <h1 className="text-lg font-semibold tracking-tight">Timeline</h1>
           <p className="text-xs text-white/40">
-            {locationFilter
-              ? `${(viewMode === 'location' ? allLocatedSlides : allDatedSlides).length} photos in ${locationFilter}`
+            {filterSummaryLabel(locationFilter, selectedPersonName)
+              ? `${(viewMode === 'location' ? allLocatedSlides : allDatedSlides).length} photos — ${filterSummaryLabel(locationFilter, selectedPersonName)}`
               : viewMode === 'location'
                 ? `${locatedSlides.length} photos across ${locationOrder.length} places`
                 : `${datedSlides.length} photos across ${sortedDates.length} days`}
@@ -183,12 +230,50 @@ export default function TimelinePage() {
         </div>
       )}
 
+      {/* People filter */}
+      {people.length > 0 && (
+        <div className="border-b border-white/10 px-6 py-3 overflow-x-auto">
+          <div className="flex gap-3 w-max items-center">
+            <button
+              onClick={() => setPersonFilter(null)}
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all border ${
+                personFilter === null
+                  ? 'bg-white/20 text-white border-white/30'
+                  : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'
+              }`}
+            >
+              Everyone
+            </button>
+            {people.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPersonFilter(p.id)}
+                title={p.name ?? undefined}
+                className={`flex flex-col items-center gap-1 transition-opacity ${
+                  personFilter === p.id ? 'opacity-100' : 'opacity-60 hover:opacity-90'
+                }`}
+              >
+                {p.thumbnail && (
+                  <FaceChip
+                    photoSrc={p.thumbnail.photoSrc}
+                    box={p.thumbnail.box}
+                    size={44}
+                    className={personFilter === p.id ? 'ring-2 ring-white' : ''}
+                  />
+                )}
+                <span className="text-[10px] text-white/70 max-w-[56px] truncate">{p.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Polaroid / scrapbook view */}
       {viewMode === 'polaroid' && (
         <div className="max-w-6xl mx-auto px-8 py-16">
           {allDatedSlides.length === 0 && (
             <p className="text-center text-white/40 text-sm py-20">
-              No photos from {locationFilter} yet.
+              {emptyStateMessage(locationFilter, selectedPersonName)}
             </p>
           )}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8 sm:gap-12">
@@ -259,7 +344,7 @@ export default function TimelinePage() {
         <div className="max-w-4xl mx-auto px-6 py-10 space-y-14">
           {sortedDates.length === 0 && (
             <p className="text-center text-white/40 text-sm py-20">
-              No photos from {locationFilter} yet.
+              {emptyStateMessage(locationFilter, selectedPersonName)}
             </p>
           )}
           {sortedDates.map((dateKey) => {
@@ -337,7 +422,10 @@ export default function TimelinePage() {
             </p>
           )}
           {filteredLocationOrder.map((location) => {
-            const placeSlides = groupedByLocation[location];
+            const placeSlides = groupedByLocation[location].filter(
+              (s) => !personPhotoSrcs || personPhotoSrcs.has(s.src),
+            );
+            if (placeSlides.length === 0) return null;
             const startIdx = globalIdx;
             globalIdx += placeSlides.length;
 
