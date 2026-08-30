@@ -10,6 +10,7 @@ A class memories website for IT2305. Browse photos, react to your favourites, an
 - **Timeline** — all dated photos in chronological order with date section headers
 - **Polaroid / scrapbook view** — toggle the timeline into a scattered polaroid card layout
 - **Emoji reactions** — react with ❤️ 😂 🔥 😮 😢 on any photo from the carousel, timeline grid, or lightbox; no login required
+- **People filter** — browse photos by classmate using face recognition, from the timeline's People row or the homepage hero carousel's "Filter by person" dropdown
 - **Discord login** — OAuth via NextAuth (for future authenticated features)
 - **Future Memories (Telegram)** — schedule any class photo to be DM'd to yourself on Telegram at a future date
 
@@ -40,6 +41,23 @@ node scripts/generate-slides.mjs
 ```
 
 This lists the bucket, classifies each file as `image` or `video` by extension, and rewrites `slides.ts`. Known non-memory assets (`next.svg`, `vercel.svg`, `SIT.png`) are excluded automatically — edit the `EXCLUDE` set in the script to exclude others.
+
+## Face recognition (People)
+
+Photos can be filtered by who's in them. Faces are detected and matched **client-side** with [face-api.js](https://github.com/justadudewhohacks/face-api.js) (model weights ship as static files in `public/models`, no external API or key needed) and clustered server-side into candidate "people" (`src/lib/faces/cluster.ts`, complete-linkage on face descriptors).
+
+**Setup:** apply the face-related migrations before using it:
+```bash
+npm run migrate
+```
+
+**Admin workflow**, at `/admin/faces` (requires `session.user.role === 'admin'`):
+1. Index photos and cluster faces into candidate people.
+2. Name a cluster, or merge it into an existing person.
+3. Open "Review photos" to confirm/reject each matched photo — confirmed photos strengthen future matching for that person; rejected ones are permanently excluded from being re-suggested.
+4. Pick a cover photo (★) to set which face represents that person in the People filter and admin grid.
+
+Clusters still needing review are sorted to the front of the admin grid, and unconfirmed photos to the top of each review dialog, so there's always a clear next thing to review.
 
 ## Future Memories (Telegram delivery)
 
